@@ -1,10 +1,7 @@
 MINIGRACE=../gracelang/minigrace
 
-minigrace.env: 
-	cd $(MINIGRACE) && $(MAKE) minigrace.env
-
 # TODO Recompile only when files are changed
-install: minigrace.env
+install:
 	rm -f ScopeModule.js 
 	rm -f ObjectTypeModule.js 
 	rm -f SharedTypes.js 
@@ -14,5 +11,5 @@ install: minigrace.env
 	mgc ObjectTypeModule.grace
 	mgc StaticTyping.grace
 
-test: minigrace.env 
+test:
 	tests/harness-js $(MINIGRACE)/j2/minigrace-js tests "" $(TESTS)
