@@ -1,5 +1,3 @@
-#pragma ExtendedLineups
-#pragma noTypeChecks
 dialect "none"
 import "standardGrace" as sg
 
@@ -27,20 +25,22 @@ type AstNode = share.AstNode
 type MixPart = share.MixPart
 type Param = share.Param
 type Parameter = share.Parameter
+type ParamFactory = share.ParamFactory
+//This type is used for checking subtyping
+type TypePair = share.TypePair
 
 // Error resulting from type checking
-def StaticTypingError: Exception is public = share.StaticTypingError
+def StaticTypingError: ExceptionKind is public = share.StaticTypingError
 
 // imported constants relating to cacheing type info
 def cache: Dictionary = sc.cache
 def allCache: Dictionary = sc.allCache
 
-
 def aMethodType : MethodTypeFactory = ot.aMethodType
 def aGenericType : GenericTypeFactory = ot.aGenericType
 def anObjectType : ObjectTypeFactory = ot.anObjectType
-def scope: share.Scope = sc.scope
-def aParam: Param = ot.aParam
+def scope: sc.Scope = sc.scope
+def aParam: ParamFactory = ot.aParam
 
 // debugging prints will print if debug is true
 def debug: Boolean = false
@@ -208,7 +208,7 @@ method checkParamArgsLengthSame(req, sigPart, params, args) -> Done
             } else { 
                 "few" 
             }
-            def where: Number = if (aSize > pSize) then {
+            def whereError: Number = if (aSize > pSize) then {
                 args.at (pSize + 1)
             } else {
             // Can we get beyond the final argument?
@@ -218,7 +218,7 @@ method checkParamArgsLengthSame(req, sigPart, params, args) -> Done
             StaticTypingError.raise(
                 "too {which} arguments to method part " ++
                 "'{sigPart.name}' on line {req.line}, " ++
-                "expected {pSize} but got {aSize}") with (where)
+                "expected {pSize} but got {aSize}") with (whereError)
         }
 }
 
@@ -691,11 +691,7 @@ def astVisitor: ast.AstVisitor is public = object {
                 // make sure it is a subtype of the declared 
                 // return type
                 def lastNode: AstNode = meth.body.last
-                if (share.Return.match(lastNode).not) then {
-                    // START HERE
-                    if (debug3) then {
-                        print("\n694: meth.body.last: {meth.body.last}")
-                    }
+                if (share.Return.matches(lastNode).not) then {
                     def lastType = typeOf(lastNode)
                     if (debug3) then {
                        io.error.write 
@@ -780,8 +776,8 @@ def astVisitor: ast.AstVisitor is public = object {
             if (name.contains "$object(") then {
                 //Adjust name for weird addition when used 
                 // in inherit node
-                req.parts.removeLast
-                name := req.nameString
+                def dollarAt = name.indexOf("$object(")
+                name := name.substringFrom(1) to (dollarAt - 1)
             }
             // String showing what call looks like
             def completeCall : String = 
@@ -1109,7 +1105,7 @@ def astVisitor: ast.AstVisitor is public = object {
 
             // Type of receiver
             // if receiver is self then look it up, else type check it
-            def rType: ObjectType = if(share.Identifier.match(rec)
+            def rType: ObjectType = if(share.Identifier.matches(rec)
                         && {rec.value == "self"}) then {
                 scope.variables.find("$elf") butIfMissing {
                     Exception.raise "type of self missing" with(rec)
@@ -1138,7 +1134,7 @@ def astVisitor: ast.AstVisitor is public = object {
                 }
             }
 
-        } case { _ →
+        } else {
             // destination type
             def dType: ObjectType = typeOf(dest)
 
@@ -1169,7 +1165,7 @@ def astVisitor: ast.AstVisitor is public = object {
         if (defd.decType.value=="Unknown") then {
             // raise error if no type given in declaration
             var typ: String := 
-                if (share.Var.match(defd)) then {"var"} else {"def"}
+                if (share.Var.matches(defd)) then {"var"} else {"def"}
             StaticTypingError.raise("no type given to declaration" ++ 
                " of {typ} '{defd.name.value}' on line {defd.line}")
                                                     with (defd.name)
@@ -1188,7 +1184,6 @@ def astVisitor: ast.AstVisitor is public = object {
             def vType: ObjectType = typeOf(value)
             if (debug2) then {
                io.error.write "\n1179: vType for {name} is {vType}"
-               print("\n1191: {vType.isConsistentSubtypeOf(defType)}")
             }
             // infer type based on initial value if definition 
             // given w/out type
@@ -1208,7 +1203,8 @@ def astVisitor: ast.AstVisitor is public = object {
         // If field is readable and/or writable, add public methods
         //  for getting and setting
         if (defd.isReadable) then {
-            scope.methods.at(name) put (aMethodType.member (name) ofType (defType))
+            scope.methods.at(name) put (
+                        aMethodType.member (name) ofType (defType))
         }
         if (defd.isWritable) then {
             def name' = name ++ ":=(1)"
@@ -1353,6 +1349,7 @@ def astVisitor: ast.AstVisitor is public = object {
         if (debug) then {
             io.error.write "\n1919: visiting dialect {node}"
         }
+        false
         //checkMatch (node)
     }
 
@@ -1473,7 +1470,7 @@ method updateMethScope(meth : AstNode) → MethodType is confidential {
 // Type check body of object definition
 // TODO: This method is still way too long!!
 method processBody (body : List⟦AstNode⟧, 
-        superclass: AstNode | false) → ObjectType is confidential {
+        superclass: AstNode | false) → PublicConfidential is confidential {
             
     def debug3: Boolean = false
     if (debug3) then {
@@ -1495,8 +1492,9 @@ method processBody (body : List⟦AstNode⟧,
         var name: String := inheriting.value.nameString
         if (name.contains "$object(") then {
             // fix glitch with method name in inheritance clause
-            inheriting.value.parts.removeLast
-            name := inheriting.value.nameString
+            // inheriting.value.parts.removeLast
+            def dollarAt = name.indexOf("$object(")
+            name := name.substringFrom(1) to (dollarAt - 1)
         }
 
         // Handle exclusions and aliases
@@ -1555,7 +1553,7 @@ method processBody (body : List⟦AstNode⟧,
                     var aliasNm: String := aliasPair.newName.value
                     // unfortunately name has parens at end 
                     // -- drop them
-                    def firstParen: String = aliasNm.indexOf("(")
+                    def firstParen: Number = aliasNm.indexOf("(")
                     if (firstParen > 0) then {
                         aliasNm := 
                             aliasNm.substringFrom (1) to (firstParen)
@@ -1715,7 +1713,7 @@ method processBody (body : List⟦AstNode⟧,
             } case { td : share.TypeDeclaration →
                 //Now does nothing if given type declaration; might make this
                 //raise an error as embedded types are disallowed.
-            } case { _ →
+            } else {
                     if (debug3) then {
                         io.error.write"\n2617 ignored {stmt}"
                     }
@@ -1755,7 +1753,7 @@ method processBody (body : List⟦AstNode⟧,
 
 // Construct setter method for variable declared in defd.  
 // Add to allMethods, and, if writeable, to publicMethods.
-method addSetterMethodFor(defd: share.Def, 
+method addSetterMethodFor(defd: share.Var | share.Def,
         publicMethods: Set⟦MethodType⟧, allMethods: Set⟦MethodType⟧)
                                     -> Done is confidential {
     if (defd.kind == "vardec") then {
@@ -1843,7 +1841,7 @@ def TypeDeclarationError = TypeError.refine "TypeDeclarationError"
 method collectTypes(nodes : Collection⟦AstNode⟧) → Done 
                                     is confidential {
     def debug3 = false
-    def typeDecs: List[[share.typeDecNode]] = emptyList
+    def typeDecs: List[[share.TypeDeclaration]] = emptyList[[share.TypeDeclaration]]
 
     // Collect all type declarations into typeDecs and insert their
     // left-hand side into scope with placholders
@@ -1869,24 +1867,14 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
         }
     }
 
-    // Update type placeholders in the scope to real types 
-    for(typeDecs) do { typeDec →
-        if (debug3) then {
-            io.error.write "\n1884: Type scope is: {scope.types}, before adding {typeDec.value}"
-        }
-        updateTypeScope(typeDec)
-        if (debug3) then {
-            io.error.write "\n1884: Type scope is: {scope.types}, after adding {typeDec.value}"
-        }
-    }
-
-    if (debug3) then {
-        io.error.write "\nType scope is: {scope.types}"
-    }
-
     if (debug3) then {
         io.error.write "\nGenerics scope is: {scope.generics}"
         io.error.write "\nType  scope is: {scope.types}"
+    }
+
+    // Update type placeholders in the scope to real types 
+    for(typeDecs) do { typeDec →
+        updateTypeScope(typeDec)
     }
 }
 
@@ -1901,7 +1889,7 @@ method isPublic(node : share.Method | share.Def | share.Var)
         }
 
         true
-    } case { _ →
+    } else {
         for(node.annotations) do { ann →
             if((ann.value == "public") || 
                     (ann.value == "readable")) then {
