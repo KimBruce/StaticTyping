@@ -1,5 +1,3 @@
-#pragma ExtendedLineups
-#pragma noTypeChecks
 dialect "none"
 import "standardGrace" as sg
 
@@ -35,6 +33,7 @@ type StackOfKind⟦V⟧ = {
     
     findOuter (levels : Number) butIfMissing (bl: Function0⟦V⟧) → V
 
+    exists (name: String) -> Boolean
 
     // Starting from the least recent level of the scope, find name & return its
     // value. If it is not there perform action in bl.
@@ -95,6 +94,16 @@ class stackOfKind⟦V⟧(kind : String) → StackOfKind⟦V⟧{
         }
         def outerType: V = stack.at(i+1).at("outer")
         outerType
+    }
+
+    method exists (name : String) -> Boolean {
+        var i: Number := stack.size
+        while { i > 0 } do {
+            var found: Boolean := stack.at(i).containsKey(name)
+            if(found) then { return true }
+            i := i - 1
+        }
+        return false
     }
 
     // Starting from the least recent level of the scope, find name & return its
