@@ -1698,8 +1698,8 @@ def anObjectType: ObjectTypeFactory is public = object {
                                           memberCall, false), member.generics))
                                             with (typeParams)
             } else {
-                def memberInScope: Boolean = scope.types.exists(memberCall)
-                if(!memberInScope) then { 
+                def inScope: Boolean = scope.types.exists(memberCall)
+                if(!inScope) then { 
                     ScopingError.raise("Failed to find {memberCall}") 
                 }
                 def identifier: AstNode = ast.identifierNode.new(memberCall, false)
