@@ -1,10 +1,8 @@
-#pragma ExtendedLineups
-#pragma noTypeChecks
 dialect "none"
 import "standardGrace" as sg
 
 import "lexer" as lexer
-import "parser2" as parser
+import "parser" as parser
 import "ast" as ast
 import "xmodule" as xmodule
 import "io" as io
@@ -24,21 +22,21 @@ type AstNode = share.AstNode
 type Parameter = share.Parameter
 type ObjectTypeFromOp = share.ObjectTypeFromOp
 type ObjectTypeFromMeths = share.ObjectTypeFromMeths
-def scope: share.Scope = sc.scope
+def scope: sc.Scope = sc.scope
 
 // Error resulting from type checking
-def StaticTypingError: Exception is public = share.StaticTypingError
+def StaticTypingError: ExceptionKind is public = share.StaticTypingError
 
 // Scoping error declaration
-def ScopingError: outer.ExceptionKind is public = TypeError.refine("ScopingError")
+def ScopingError: ExceptionKind is public = TypeError.refine("ScopingError")
 
 // If true prints extra info
 def debug : Boolean = false
 
 // Collection of method types in type
-var methodtypes: List[[MethodType]] := [ ]
+var methodtypes: List[[MethodType]] := emptyList[[MethodType]]
 
-def trails: List[[TypePair]] = emptyList
+def trails: List[[TypePair]] = emptyList[[TypePair]]
 
 // visitor to convert a type expression to a string
 // Makes printing them a bit clearer. Used in gct?
@@ -141,26 +139,26 @@ method dtypeToString(dtype) {
 // Used in match statements to catch indicate no method found
 // Method returns these when no method found.
 def noSuchMethod: outer.Pattern is readable = object {
-    inherit BasicPattern.new
+    use BasicPattern
 
-    method match(obj : Object) {
-        if (self.isMe(obj)) then {
-            SuccessfulMatch.new(self, list[])
+    method matches (obj : Object) -> Boolean {
+        if (isMe(obj)) then {
+            true
         } else {
-            FailedMatch.new(obj)
+            false
         }
     }
 }
 
 // Used in match statements to indicate no type found
 def noSuchType: outer.Pattern = object {
-    inherit BasicPattern.new
+    use BasicPattern
 
-    method match(obj : Object) {
-        if (self.isMe(obj)) then {
-            SuccessfulMatch.new(self, list[])
+    method matches (obj : Object) -> Boolean {
+        if (isMe(obj)) then {
+            true
         } else {
-            FailedMatch.new(obj)
+            false
         }
     }
 }
@@ -311,13 +309,13 @@ def aMethodType: MethodTypeFactory is public = object {
                                     "({part.parameters.size})")
                     }
                     show := "{show}{part.name}("
-                    var once: Boolean := false
+                    var first: Boolean := false
                     for (part.parameters) do { param →
-                        if (once) then {
+                        if (first) then {
                             show := "{show}, "
                         }
                         show := "{show}{param}"
-                        once := true
+                        first := true
                     }
                     show := "{show})"
                 }
@@ -412,9 +410,9 @@ def aMethodType: MethodTypeFactory is public = object {
                 // Determine whether each method still have uninitialized
                 // type params
                 if (typeParams.size > 0) then {
-                    return self.genericSpecialisationOf(other)
+                    return genericSpecialisationOf(other)
                 } else {
-                    return self.nongenericSpecialisationOf(other)
+                    return nongenericSpecialisationOf(other)
                 }
             }
 
@@ -432,7 +430,7 @@ def aMethodType: MethodTypeFactory is public = object {
                 }
 
                 // Initialize both methods
-                def appliedSelf : MethodType = self.apply(baseList)
+                def appliedSelf : MethodType = apply(baseList)
                 def appliedOther : MethodType = other.apply(baseList)
 
                 if (debug) then {
@@ -453,7 +451,7 @@ def aMethodType: MethodTypeFactory is public = object {
 
                 //Shortcut for when self and other have the exact same param
                 //types and return type
-                if (self.isMe(other)) then {
+                if (isMe(other)) then {
                     return answerConstructor(true)
                 }
 
@@ -623,10 +621,15 @@ def aMethodType: MethodTypeFactory is public = object {
 
                 // Return type of the method or class
                 def rType: AstNode = match (meth)
-                    case { m : share.Method | share.Class → m.dtype}
-                    case { m : share.MethodSignature → m.rtype}
+                    case { m : share.Method | share.Class → 
+                        m.dtype
+                }
+                    case { m : share.MethodSignature →
+                        m.rtype
+                }
                 if (debug3) then {
-                   io.error.write "\n587 creating returntype for {rType}"
+                   io.error.write "\n627: creating returntype for {rType}"
+                   io.error.write "\n628: rType.kind: {rType.kind}"
                 }
 
                 // Full method type
@@ -663,7 +666,7 @@ def aMethodType: MethodTypeFactory is public = object {
                 }
                 methType
         } 
-            case { _ →
+            else {
                 Exception.raise "unrecognised method node" with(node)
         }
     }
@@ -716,12 +719,12 @@ def aGenericType : GenericTypeFactory is public = object{
 
         method asString → String {
             var s : String := name ++ "⟦"
-            var once : Boolean := true
+            var first : Boolean := true
             for (typeParams) do {typeParam : String →
-                if (once.not) then {
+                if (first.not) then {
                     s := "{s}, {typeParam}"
                 } else {
-                    once := false
+                    first := false
                     s := "{s}{typeParam}"
                 }
             }
@@ -764,6 +767,7 @@ method getTypeParams(params: List[[AstNode]]) -> List[[String]] {
 def anObjectType: ObjectTypeFactory is public = object {
     // super class providing default implementations of methods
     class superObjectType -> ObjectType {
+        use equality
 
         // Returns self or an object type from scope when an object type
         // is built from identifier
@@ -963,7 +967,7 @@ def anObjectType: ObjectTypeFactory is public = object {
 
                 // If trails already contains selfOtherPair, we can assume
                 // self <: other.  Check other trivial cases of subtyping
-                if ((self.isMe(other')) || {trails.contains(selfOtherPair)}
+                if ((isMe(other')) || {trails.contains(selfOtherPair)}
                         || {other'.isDynamic} || {other'.isDone}) then {
                     if (debug4) then {
                         io.error.write "\n992: self : {self} other: {other'}"
@@ -998,8 +1002,8 @@ def anObjectType: ObjectTypeFactory is public = object {
 
                 // Case where other is built from & or |
                 if (other'.isOp) then {
-                    def left: Answer = self.isSubtypeHelper(other'.left)
-                    def right: Answer = self.isSubtypeHelper(other'.right)
+                    def left: Answer = isSubtypeHelper(other'.left)
+                    def right: Answer = isSubtypeHelper(other'.right)
                     if (debug4) then {
                         io.error.write
                             "\n832: ansLeft: {left}, ansRight:{right}"
@@ -1028,9 +1032,12 @@ def anObjectType: ObjectTypeFactory is public = object {
                 }
 
                 // Should have covered all cases by now!
-                if (debug4) then { 
-                   io.error.write "Oops! Missed a case for {self} and {other'}"
-                   io.error.write "other'.isMeths = {other'.isMeths}"
+                if (true) then {
+                   io.error.write "\nresolve: {resolve}"
+                   io.error.write "\nother'.resolve: {other'.resolve}"
+                   io.error.write "\nOps! Missed a case for {self} and {other'}"
+                   io.error.write "\nother'.isMeths = {other'.isMeths}"
+                   StaticTypingError.raise("Oops! Missed a case for {self} and {other'}")
                 }
             }
 
@@ -1281,7 +1288,7 @@ def anObjectType: ObjectTypeFactory is public = object {
 
             // If trails already contains selfOtherPair, we can assume
             // self <: other.  Check other trivial cases of subtyping
-            if ((self.isMe(other)) 
+            if ((isMe(other)) 
                     || {trails.contains(selfOtherPair)}
                     || {other.isDynamic} 
                     || {other.isDone}) then {
@@ -1515,7 +1522,7 @@ def anObjectType: ObjectTypeFactory is public = object {
             } case { member : share.Member →
                 "{asStringHelper(member.receiver)}.{member.value}" ++
                                         "{typeParamsToString(member.generics)}"
-            } case { _ →
+            } else {
                 ProgrammingError.raise("No case in method 'asString' of the" ++
                                           "class definedByNode for node of " ++
                                           "kind {nd.kind}") with(nd)
@@ -1621,7 +1628,7 @@ def anObjectType: ObjectTypeFactory is public = object {
               }
             } case { "|" →
               returnValue := leftType | rightType
-            } case { _ →
+            } else {
               ProgrammingError.raise("Expected '&' or '|', got {opValue}")
                                                                         with(op)
             }
@@ -1691,11 +1698,15 @@ def anObjectType: ObjectTypeFactory is public = object {
                                           memberCall, false), member.generics))
                                             with (typeParams)
             } else {
-                returnValue := scope.types.find(memberCall) butIfMissing {
-                              ScopingError.raise("Failed to find {memberCall}")}
+                def memberInScope: Boolean = scope.types.exists(memberCall)
+                if(!memberInScope) then { 
+                    ScopingError.raise("Failed to find {memberCall}") 
+                }
+                def identifier: AstNode = ast.identifierNode.new(memberCall, false)
+                returnValue := anObjectType.fromIdentifier(identifier) with (emptyList)
             }
 
-        } case { _ →
+        } else {
             ProgrammingError.raise "No case for node of kind {dtype.kind}"
                                                                     with(dtype)
         }
@@ -1992,10 +2003,10 @@ def anObjectType: ObjectTypeFactory is public = object {
 
     // Used for type-checking imports; please update when additional types are
     // added
-    def preludeTypes: Set⟦String⟧ is public = ["Done", "Pattern", "Iterator",
+    def preludeTypes: Set⟦String⟧ is public = emptySet[[String]].addAll(["Done", "Pattern", "Iterator",
                                   "Boolean", "Number", "String", "List", "Set",
                                   "Sequence", "Dictionary", "Point", "Binding",
-                                  "Collection", "Enumerable", "Range", "Object"]
+                                  "Collection", "Enumerable", "Range", "Object"])
 
     // Create object types for built-in types (includes all prelude types)
     // This part just creates them, no methods yet
