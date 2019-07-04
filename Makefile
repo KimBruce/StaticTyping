@@ -1,7 +1,11 @@
 MINIGRACE=../gracelang/minigrace
 
 # TODO Recompile only when files are changed
-install:
+
+minigrace.env:
+	cd $(MINIGRACE) && $(MAKE) minigrace.env
+
+install: minigrace.env
 	rm -f ScopeModule.js 
 	rm -f ObjectTypeModule.js 
 	rm -f SharedTypes.js 
