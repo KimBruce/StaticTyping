@@ -22,6 +22,7 @@ def input : String =
     "def test : Foo = bar\n"
 
 //Turns input into an abstract syntax tree (ast)
+util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
 def inputTree = ir.resolve(module)

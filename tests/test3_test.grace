@@ -70,4 +70,4 @@ var zz: Number | String := 5
 match(zz)
     case {zzn: Number → print "number {zzn+1}"}
     case {zzs: String → print "string {zzs++"!"}"}
-    case {_ : Object → print "no match"}
+    else {print "no match"}

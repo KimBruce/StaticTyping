@@ -24,9 +24,8 @@ def input : String =
     "   m -> Bar" ++
     "\}\n"
 
-print(input)
-
 // Turns input into an abstract syntax tree (ast)
+util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
 def inputTree = ir.resolve(module)
@@ -34,7 +33,7 @@ def inputTree = ir.resolve(module)
 // Returns a list of AstNodes corresponding to each testBlock
 def nodes = inputTree.value
 
-print(nodes)
+inputTree.accept(st.astVisitor)
 
 def typeFoo: ast.AstNode = nodes.at(1)
 def typeBar: ast.AstNode = nodes.at(2)
@@ -46,10 +45,7 @@ def objTypeBar: sh.ObjectType = ot.anObjectType.fromDType(typeBar.value) with (e
 def objTypeA: sh.ObjectType = ot.anObjectType.fromDType(typeA.value) with (emptyList)
 def objTypeB: sh.ObjectType = ot.anObjectType.fromDType(typeB.value) with (emptyList)
 
-testSuiteNamed "subtying tests" with {
-
-    inputTree.accept(st.astVisitor)
-
+testSuiteNamed "subtyping tests" with {
     test "simple subtype" by {
         assert(objTypeFoo.isSubtypeOf(objTypeBar)) shouldBe (true)
     }

@@ -17,6 +17,7 @@ def input : String =
     "type B = String | Boolean\n"
 
 //Turns input into an abstract syntax tree (ast)
+util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
 def inputTree = ir.resolve(module)
@@ -33,8 +34,7 @@ inputTree.accept(st.astVisitor)
 def A : ot.ObjectType = sm.scope.types.stack.last.at("A")
 def B : ot.ObjectType = sm.scope.types.stack.last.at("B")
 
-print("\nA.isSubtypeOf(B): {A.isSubtypeOf(B)}")
-print("\nB.isSubtypeOf(A): {B.isSubtypeOf(A)}")
-
-print("\nA.isSubtypeOf(B): {A.isSubtypeOf(B)}")
-print("\nB.isSubtypeOf(A): {B.isSubtypeOf(A)}")
+print("{A.isSubtypeOf(B)}")
+print("{B.isSubtypeOf(A)}")
+print("{A.isSubtypeOf(B)}")
+print("{B.isSubtypeOf(A)}")
