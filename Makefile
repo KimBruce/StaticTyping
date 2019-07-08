@@ -1,12 +1,11 @@
 .DEFAULT_GOAL := compile
 
 MINIGRACE = ../gracelang/minigrace
-SRC = $(wildcard *.grace)
 
 %.js: %.grace
 	mgc $<
 
-compile: $(patsubst %.grace, %.js, $(SRC))
+compile: $(patsubst %, %.js, ScopeModule ObjectTypeModule SharedTypes StaticTyping)
 
 test:
 	rm -f tests/*.js
