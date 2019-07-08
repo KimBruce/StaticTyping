@@ -9,6 +9,7 @@ SRC = $(wildcard *.grace)
 compile: $(patsubst %.grace, %.js, $(SRC))
 
 test:
+	rm tests/*.js
 	tests/harness-js $(MINIGRACE)/j2/minigrace-js tests "" $(TESTS)
 
 clean:
