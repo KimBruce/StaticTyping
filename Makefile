@@ -1,19 +1,15 @@
+.DEFAULT_GOAL := compile
+
 MINIGRACE=../gracelang/minigrace
+SRC = $(wildcard *.grace)
 
-# TODO Recompile only when files are changed
+%.js: %.grace
+	mgc $<
 
-minigrace.env:
-	cd $(MINIGRACE) && $(MAKE) minigrace.env
-
-install: minigrace.env
-	rm -f ScopeModule.js 
-	rm -f ObjectTypeModule.js 
-	rm -f SharedTypes.js 
-	rm -f StaticTyping.js
-	mgc ScopeModule.grace
-	mgc SharedTypes.grace
-	mgc ObjectTypeModule.grace
-	mgc StaticTyping.grace
+compile: $(patsubst %.grace, %.js, $(SRC))
 
 test:
 	tests/harness-js $(MINIGRACE)/j2/minigrace-js tests "" $(TESTS)
+
+clean:
+	rm  *.js
