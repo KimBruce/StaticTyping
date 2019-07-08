@@ -5,7 +5,7 @@ MINIGRACE = ../gracelang/minigrace
 %.js: %.grace
 	mgc $<
 
-compile: $(patsubst %, %.js, ScopeModule ObjectTypeModule SharedTypes StaticTyping)
+compile: $(patsubst %, %.js, SharedTypes ScopeModule ObjectTypeModule StaticTyping)
 
 test:
 	rm -f tests/*.js
