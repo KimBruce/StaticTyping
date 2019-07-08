@@ -138,7 +138,7 @@ method dtypeToString(dtype) {
 
 // Used in match statements to catch indicate no method found
 // Method returns these when no method found.
-def noSuchMethod: outer.Pattern is readable = object {
+def noSuchMethod: Pattern is readable = object {
     use BasicPattern
 
     method matches (obj : Object) -> Boolean {
@@ -151,7 +151,7 @@ def noSuchMethod: outer.Pattern is readable = object {
 }
 
 // Used in match statements to indicate no type found
-def noSuchType: outer.Pattern = object {
+def noSuchType: Pattern = object {
     use BasicPattern
 
     method matches (obj : Object) -> Boolean {
@@ -1997,9 +1997,9 @@ def anObjectType: ObjectTypeFactory is public = object {
     var base : ObjectType is readable := dynamic
 
     // Type of command
-    def doneType : ObjectType is public = fromMethods(sg.emptySet)
+    def doneType : ObjectType is public = fromMethods(emptySet)
                                                                 withName("Done")
-    base := fromMethods(sg.emptySet) withName("Object")
+    base := fromMethods(emptySet) withName("Object")
 
     // Used for type-checking imports; please update when additional types are
     // added
@@ -2010,43 +2010,43 @@ def anObjectType: ObjectTypeFactory is public = object {
 
     // Create object types for built-in types (includes all prelude types)
     // This part just creates them, no methods yet
-    def pattern : ObjectType is public = fromMethods(sg.emptySet)
+    def pattern : ObjectType is public = fromMethods(emptySet)
                                                   withName("Pattern")
-    def iterator : ObjectType is public = fromMethods(sg.emptySet)
+    def iterator : ObjectType is public = fromMethods(emptySet)
                                                   withName("Iterator")
-    def boolean : ObjectType is public = fromMethods(sg.emptySet)
+    def boolean : ObjectType is public = fromMethods(emptySet)
                                                   withName("Boolean")
-    def number : ObjectType is public = fromMethods(sg.emptySet)
+    def number : ObjectType is public = fromMethods(emptySet)
                                                   withName("Number")
-    def string : ObjectType is public = fromMethods(sg.emptySet)
+    def string : ObjectType is public = fromMethods(emptySet)
                                                   withName("String")
-    def listTp : ObjectType is public = fromMethods(sg.emptySet)
+    def listTp : ObjectType is public = fromMethods(emptySet)
                                                   withName("List")
-    def set : ObjectType is public = fromMethods(sg.emptySet)
+    def set : ObjectType is public = fromMethods(emptySet)
                                                   withName("Set")
-    def sequence : ObjectType is public = fromMethods(sg.emptySet)
+    def sequence : ObjectType is public = fromMethods(emptySet)
                                                   withName("Sequence")
-    def dictionary : ObjectType is public = fromMethods(sg.emptySet)
+    def dictionary : ObjectType is public = fromMethods(emptySet)
                                                   withName("Dictionary")
-    def point : ObjectType is public = fromMethods(sg.emptySet)
+    def point : ObjectType is public = fromMethods(emptySet)
                                                   withName("Point")
-    def binding : ObjectType is public = fromMethods(sg.emptySet)
+    def binding : ObjectType is public = fromMethods(emptySet)
                                                   withName("Binding")
-    def collectionBase : ObjectType is public = fromMethods(sg.emptySet)
+    def collectionBase : ObjectType is public = fromMethods(emptySet)
                                                   withName("CollectionBase")
-    def enumerable : ObjectType is public = fromMethods(sg.emptySet)
+    def enumerable : ObjectType is public = fromMethods(emptySet)
                                                   withName("Enumerable")
-    def rangeTp : ObjectType is public = fromMethods(sg.emptySet)
+    def rangeTp : ObjectType is public = fromMethods(emptySet)
                                                   withName("Range")
-    def preludeType: ObjectType is public = fromMethods(sg.emptySet)
+    def preludeType: ObjectType is public = fromMethods(emptySet)
                                                 withName("PreludeType")
-    def boolBlock: ObjectType is public = fromMethods(sg.emptySet)
+    def boolBlock: ObjectType is public = fromMethods(emptySet)
                                                   withName("BoolBlock")
-    def doneBlock: ObjectType is public = fromMethods(sg.emptySet)
+    def doneBlock: ObjectType is public = fromMethods(emptySet)
                                                   withName("DoneBlock")
-    def dynamicDoneBlock: ObjectType is public = fromMethods(sg.emptySet)
+    def dynamicDoneBlock: ObjectType is public = fromMethods(emptySet)
                                                   withName("DynamicDoneBlock")
-    def exceptionKind: ObjectType is public = fromMethods(sg.emptySet)
+    def exceptionKind: ObjectType is public = fromMethods(emptySet)
                                                   withName("ExceptionKind")
 
     // Now add methods to each type
@@ -2373,7 +2373,7 @@ def anObjectType: ObjectTypeFactory is public = object {
     // def moduledec: ast.moduleNode = parser.parse(tokens)
     // io.error.write "\n1858 parseTree is {moduledec.value.at (1)}"
     // def collection: GenericType is public = aGenericType.fromTypeDec(moduledec.value.at (1))
-    // def typeVar: ObjectType is public = anObjectType.fromMethods(sg.emptySet)
+    // def typeVar: ObjectType is public = anObjectType.fromMethods(emptySet)
     //                                                  withName ("T")
     // io.error.write "\n1815 collection is {anObjectType.collection}"
     // for (collection.oType.methods) do {meth: MethodType ->
