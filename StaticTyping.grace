@@ -40,6 +40,8 @@ def aGenericType : GenericTypeFactory = ot.aGenericType
 def anObjectType : ObjectTypeFactory = ot.anObjectType
 def scope: sc.Scope = sc.scope
 def aParam: ParamFactory = ot.aParam
+// TODO Remove eventually
+def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
 def debug: Boolean = false
@@ -689,7 +691,7 @@ def astVisitor: ast.AstVisitor is public = object {
         if (share.Return.matches(lastNode).not) then {
             
             if (debug) then {
-                print("\n694: meth.body.last: {meth.body.last}")
+                io.error.write("\n694: meth.body.last: {meth.body.last}")
             }
 
             def lastType = typeOf(lastNode)
@@ -1304,12 +1306,73 @@ def astVisitor: ast.AstVisitor is public = object {
         false
     }
 
+    // Comb through an AstNode to prepend the import nickname to any type references
+    // that are not prelude types.
+    //
+    // When importing a file with the nickname 'impName', we need to prepend
+    // 'impName' to references to any type 'T' that are accessible in our import but
+    // are only accessible to us as 'impName.T'. These type references are saved as
+    // identifier nodes inside an Ast tree created from the type declarations and
+    // method types saved in the gct file.
+    class importVisitor(impName : String) → ast.AstVisitor {
+        inherit ast.baseVisitor
+
+        // Special case where we also want to prepend impName to the name of the
+        // type definition as well as any type parameters it may have.
+        method visitTypeDec(typeDec:ast.AstNode) → Boolean {
+            //typeDec.name is a identifierBinding, so we need to manually prepend
+            //impName here
+            typeDec.name.name := "{impName}.{typeDec.nameString}"
+
+            prependToTypeParam(typeDec)
+            true
+        }
+
+        method visitMethod(meth:ast.AstNode) → Boolean {
+            prependToTypeParam(meth)
+            true
+        }
+
+        method visitMethodType(methType:ast.AstNode) → Boolean {
+            prependToTypeParam(methType)
+            true
+        }
+
+        // Prepend impName to references to types that are not prelude types
+        //
+        // Also make sure we are prepending impName to type annotations and not
+        // parameter names(stored as identifierBindings).
+        method visitIdentifier(ident:ast.AstNode) → Boolean {
+            // identifierresolution can also prepend 'self' and 'module()Object' to
+            // calls. These are not needed for type-checking so we ignore them
+            if ((ident.name == "self") || {ident.name == "module()Object"}) then {
+                ident.name := impName
+            } elseif {preludeTypes.contains(ident.name).not} then {
+                if (ident.isBindingOccurrence.not) then {
+                    ident.name := "{impName}.{ident.name}"
+                }
+            }
+            true
+        }
+
+        // Prepend impName to type parameters
+        //
+        // Do not need to check if type params are prelude types since the
+        // identifier resolution makes sure their name is unused.
+        method prependToTypeParam(node:ast.AstNode) → Done is confidential {
+            if (false ≠ node.typeParams) then {
+                for (node.typeParams.params) do { tParam : ast.AstNode →
+                    tParam.name := "{impName}.{tParam.name}"
+                }
+            }
+        }
+    }
+
     method processGct(gct: Dictionary⟦String, List⟦String⟧⟧, 
                             impName: String) → Set⟦MethodType⟧ {
         def importMethods : Set⟦MethodType⟧ = emptySet
 
-        def basicImportVisitor : ast.AstVisitor = 
-                        xmodule.importVisitor(impName)
+        def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
         gct.keys.do { key : String →
             //example key: 'typedec-of:MyType:'
             if (key.startsWith("typedec-of:")) then {
@@ -1325,8 +1388,7 @@ def astVisitor: ast.AstVisitor is public = object {
                 if (prefx == "") then {
                     typeDec.accept(basicImportVisitor)
                 } else {
-                    typeDec.accept(
-                        xmodule.importVisitor("{impName}.{prefx}"))
+                    typeDec.accept(importVisitor("{impName}.{prefx}"))
                 }
 
                 // If the type name begins with a '$', then it 
