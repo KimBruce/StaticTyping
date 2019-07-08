@@ -393,3 +393,12 @@ def Dialect: Pattern is public = aPatternMatchingNode "dialect"
 def Return: Pattern is public = aPatternMatchingNode "return"
 def Inherit: Pattern is public = aPatternMatchingNode "inherit"
 def Module: Pattern is public = aPatternMatchingNode "module"
+
+// Set of prelude types; used by the importVisitor in this file as well as
+// inside StaticTyping.grace and ObjectTypeModule.grace.
+//
+// Please update this set when new prelude types are added.
+def preludeTypes: Set⟦String⟧ is public = emptySet⟦String⟧
+preludeTypes.addAll( ["Done", "Pattern", "Iterator", "Boolean", "Number",
+                      "String", "List", "Set", "Sequence", "Dictionary","Point",
+                      "Binding", "Collection", "Enumerable", "Range", "Object"])
