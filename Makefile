@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := compile
 
-MINIGRACE=../gracelang/minigrace
+MINIGRACE = ../gracelang/minigrace
 SRC = $(wildcard *.grace)
 
 %.js: %.grace
