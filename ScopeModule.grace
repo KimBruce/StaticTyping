@@ -173,9 +173,9 @@ def scope: Scope is public = object {
     // returns value of bl
     method enter⟦V⟧ (bl:Function0⟦V⟧) → V {
         // create new empty environment
-        variables.stack.push (sg.emptyDictionary)
-        methods.stack.push (sg.emptyDictionary)
-        types.stack.push (sg.emptyDictionary)
+        variables.stack.push (emptyDictionary)
+        methods.stack.push (emptyDictionary)
+        types.stack.push (emptyDictionary)
 
         // execute bl in the new environment
         def result: V = bl.apply
