@@ -42,6 +42,28 @@ type TypePair = {
     asString → String
 }
 
+//Used in publicType, publicTypeElse, and gatherTypesForMethods Methods 
+//All of which are helper methods for processBody in staticTyping
+type SetMethodTypePair = {
+    first -> Set⟦MethodType⟧
+    second → Set⟦MethodType⟧
+}
+
+//Used in the publicType method in staticTyping
+type PublicTypeReturnBundle = {
+    allMethods -> Set⟦MethodType⟧
+    publicMethods -> Set⟦MethodType⟧
+    internalType -> ObjectType
+}
+
+//Used in the visitMethod method in staticTyping
+type VisitMethodHelperBundle = {
+    mType -> MethodType
+    returnType -> ObjectType
+    typeParams -> List⟦String⟧
+}
+
+
 //This type is used for checking subtyping
 type Answer = {
     ans → Boolean

@@ -191,6 +191,67 @@ class typePair (first':ObjectType, second':ObjectType) →
     }
 }
 
+//Used in publicType, publicTypeElse, and gatherTypesForMethods Methods 
+//All of which are helper methods for processBody in staticTyping
+type SetMethodTypePair = share.SetMethodTypePair
+
+//holds and returns two objects of type Set⟦MethodType⟧
+class setMethodTypePair (first': Set⟦MethodType⟧, second': Set⟦MethodType⟧ ) -> SetMethodTypePair {
+
+    method first → Set⟦MethodType⟧ {
+        first'
+    }
+
+    method second → Set⟦MethodType⟧ {
+        second'
+    }
+
+}
+
+
+
+//Used in the publicType method in staticTyping
+type PublicTypeReturnBundle = share.PublicTypeReturnBundle
+
+//holds and returns three objects of type Set⟦MethodType⟧ and ObjectType
+class publicTypeReturnBundle (allMethods':Set⟦MethodType⟧, publicMethods': Set⟦MethodType⟧,
+        internalType': ObjectType) -> PublicTypeReturnBundle {
+
+    method allMethods → Set⟦MethodType⟧ {
+        allMethods'
+    }
+
+    method publicMethods → Set⟦MethodType⟧ {
+        publicMethods'
+    }
+
+    method internalType -> ObjectType {
+        internalType'
+    }
+
+}
+
+
+//Used in the visitMethod method in staticTyping
+type VisitMethodHelperBundle = share.VisitMethodHelperBundle
+
+//holds and returns two objects of type MethodType and ObjectType
+class visitMethodHelperBundle (mType': MethodType, returnType' : ObjectType, 
+        typeParams': List⟦String⟧) -> VisitMethodHelperBundle {
+
+    method mType -> MethodType {
+        mType'
+    }
+
+    method returnType -> ObjectType {
+        returnType'
+    }
+
+    method typeParams -> List⟦String⟧ {
+        typeParams'
+    }
+}
+
 // This type is used for checking subtyping
 type Answer = share.Answer
 

@@ -1,6 +1,5 @@
 dialect "none"
 import "standardGrace" as sg
-
 import "ast" as ast
 import "lexer" as lex
 import "parser" as parser
@@ -581,8 +580,164 @@ def astVisitor: ast.AstVisitor is public = object {
         if (debug3) then {
             io.error.write "\n515: Visiting method {meth}\n"
         }
+
         // ensure all parameters have known types and 
         // method has return type
+        ensureKnown (meth)
+     
+        // meth.value is Identifier Node
+        def name: String = meth.value.value
+        // declared type of the method being introduced
+        var mType: MethodType
+        var returnType: ObjectType
+
+        // Enter new scope with parameters to type-check body of method
+        if (debug3) then {
+            io.error.write "\n1585: Entering scope for {meth}\n"
+        }
+
+        //returns the type parameters associated with meth: AstNode to be added to the scope
+        def transferBundle : ot.VisitMethodHelperBundle = obtainTypeParams (meth, name)
+
+        //update mType and returnType accordingly
+        mType := transferBundle.mType
+        returnType := transferBundle.returnType
+
+        scope.enter {
+            def typeParams: List[[String]] = transferBundle.typeParams
+        }
+
+        // if method is just a member name then can record w/variables
+        if (isMember(mType)) then {
+            scope.variables.at(name) put(returnType)
+        }
+
+        // always record it as a method
+        scope.methods.at(name) put(mType)
+
+        // Declaration statement always has type Done
+        cache.at(meth) put (anObjectType.doneType)
+        false
+
+    }
+
+    //Helper method of visitMethod
+    //returns the type parameters associated with meth: AstNode to be added to the scope
+    method obtainTypeParams (meth: AstNode, name: String)  -> ot.VisitMethodHelperBundle is confidential{
+        var mType: MethodType
+        var returnType: ObjectType
+        var typeParams: List⟦String⟧ := emptyList⟦String⟧
+
+        if (false != meth.typeParams) then {
+                if (debug) then {
+                    io.error.write "\n546st: In has type params"
+                }
+                typeParams := ot.getTypeParams(meth.typeParams)
+        }
+        if (debug) then {
+               io.error.write "\n547st: typeParams: {typeParams}"
+        }
+
+        mType := aMethodType.fromNode(meth) with (typeParams)
+        returnType := mType.retType
+
+        //enter all the parameters to the scope
+        for(meth.signature) do { part: AstNode →
+            for(part.params) do { param: AstNode →
+                scope.variables.at(param.value)
+                    put (anObjectType.fromDType (param.dtype) 
+                                with (typeParams))
+            }
+        }
+        // We used to collect the type definitions in method 
+        // bodies but those are currently not allowed
+        // collectTypes((meth.body))
+        if (debug) then {
+            io.error.write 
+                "\n595: collected types for {list(meth.body)}\n"
+        }
+        // Check types of all methods in the body.  
+        // Special case for returns
+        checkMethodTypes (meth, returnType, name)
+      
+        if (debug) then {
+            io.error.write "\n594: Done checking body"
+        }
+        // If no body then the method must return type Done
+        if(meth.body.size == 0) then {
+            if (anObjectType.doneType.isConsistentSubtypeOf 
+                                    (returnType).not) then {
+                StaticTypingError.raise(
+                    "the method '{name}' on line {meth.line} " ++
+                    "declares a result of type '{returnType}'," ++
+                    " but has no body") with (meth)
+            }
+        } else {
+            calculateLastExpression(meth,returnType, name)
+        }
+
+        return ot.visitMethodHelperBundle (mType, returnType, typeParams)
+    }
+
+    //Helper method for obtainTypeParams
+    // Calculate type of last expression in body and 
+    // make sure it is a subtype of the declared 
+    // return type
+    method calculateLastExpression (meth: AstNode, returnType: ObjectType, name:String) -> Done is confidential {
+        def lastNode: AstNode = meth.body.last
+
+        if (share.Return.matches(lastNode).not) then {
+            
+            if (debug) then {
+                print("\n694: meth.body.last: {meth.body.last}")
+            }
+
+            def lastType = typeOf(lastNode)
+
+            if (debug) then {
+               io.error.write 
+                  "\n607st: type of lastNode is {lastType}"
+            }
+            if(lastType.isConsistentSubtypeOf 
+                                    (returnType).not) then {
+                StaticTypingError.raise(
+                    "the method '{name}' on line " ++
+                    "{meth.line} declares a result of " ++
+                    "type '{returnType}', but returns " ++
+                    "an expression of type '{lastType}'") 
+                                with (lastNode)
+            } else {
+                if (debug) then {
+                    io.error.write ("\n707: {lastType} is consistent subtype of {returnType}")
+                }
+            }
+        }
+
+        if (debug) then {
+            io.error.write (
+                "\n2048 type of lastNode in method " ++
+                "{meth.nameString} is {lastNode.kind}")
+        }
+        // If last node is an object definition, the 
+        // method can be inherited from so calculate the 
+        // supertype (confidential) and put in allCache
+        if (lastNode.kind == "object") then {
+            visitObject(lastNode)
+            def confidType: ObjectType = allCache.at(lastNode)
+            allCache.at(meth.nameString) put (confidType)
+            if (debug) then {
+                io.error.write (
+                    "\n2053 confidType is {confidType} " ++
+                    "for {meth.nameString}")
+            }
+        }
+    }
+
+    
+    // ensure all parameters have known types and 
+    // method has return type
+    //Helper method for visitMethod
+    method ensureKnown (meth:AstNode) -> Done is confidential {
         for (meth.signature) do {s: AstNode →
             for (s.params) do {p: AstNode →
                 if (((p.kind == "identifier") && {p.wildcard.not})
@@ -599,57 +754,13 @@ def astVisitor: ast.AstVisitor is public = object {
                 " '{meth.value.value}' on line {meth.line}") 
                                 with (meth.value)
         }
+    }
 
-        // meth.value is Identifier Node
-        def name: String = meth.value.value
-        // declared type of the method being introduced
-        var mType: MethodType
-        var returnType: ObjectType
-
-        // Enter new scope with parameters to type-check body of method
-        if (debug3) then {
-            io.error.write "\n1585: Entering scope for {meth}\n"
-        }
-        scope.enter {
-            var typeParams: List[[String]] := emptyList[[String]]
-            if (debug) then {
-                io.error.write 
-                    "\n544st: meth.typeParams: {meth.typeParams}"
-            }
-            if (false != meth.typeParams) then {
-                if (debug) then {
-                    io.error.write "\n546st: In has type params"
-                }
-                typeParams := ot.getTypeParams(meth.typeParams)
-            }
-            if (debug) then {
-               io.error.write "\n547st: typeParams: {typeParams}"
-            }
-//            for (mType.typeParams) do { typeParamName : String →
-//                scope.types.at(typeParamName) 
-//                      put (anObjectType.base)
-//            }
-            mType := aMethodType.fromNode(meth) with (typeParams)
-            returnType := mType.retType
-            for(meth.signature) do { part: AstNode →
-                for(part.params) do { param: AstNode →
-                    scope.variables.at(param.value)
-                         put (anObjectType.fromDType (param.dtype) 
-                                            with (typeParams))
-                }
-            }
-
-            // We used to collect the type definitions in method 
-            // bodies but those are currently not allowed
-            // collectTypes((meth.body))
-            if (debug3) then {
-                io.error.write 
-                    "\n595: collected types for {list(meth.body)}\n"
-            }
-
-            // Check types of all methods in the body.  
-            // Special case for returns
-            for(meth.body) do { stmt: AstNode →
+    // Check types of all methods in the body.  
+    // Special case for returns
+    //HElper method for visitMethod
+    method checkMethodTypes (meth: AstNode, returnType: ObjectType, name : String) -> Done {
+        for(meth.body) do { stmt: AstNode →
                 checkTypes(stmt)
 
                 // Write visitor to make sure return statements 
@@ -673,76 +784,7 @@ def astVisitor: ast.AstVisitor is public = object {
                         false
                     }
                 })
-            }
-            if (debug) then {
-                io.error.write "\n594: Done checking body"
-            }
-            // If no body then the method must return type Done
-            if(meth.body.size == 0) then {
-                if (anObjectType.doneType.isConsistentSubtypeOf 
-                                        (returnType).not) then {
-                    StaticTypingError.raise(
-                        "the method '{name}' on line {meth.line} " ++
-                        "declares a result of type '{returnType}'," ++
-                        " but has no body") with (meth)
-                }
-            } else {
-                // Calculate type of last expression in body and 
-                // make sure it is a subtype of the declared 
-                // return type
-                def lastNode: AstNode = meth.body.last
-                if (share.Return.matches(lastNode).not) then {
-                    def lastType = typeOf(lastNode)
-                    if (debug3) then {
-                       io.error.write 
-                          "\n607st: type of lastNode is {lastType}"
-                    }
-                    if(lastType.isConsistentSubtypeOf 
-                                            (returnType).not) then {
-                        StaticTypingError.raise(
-                            "the method '{name}' on line " ++
-                            "{meth.line} declares a result of " ++
-                            "type '{returnType}', but returns " ++
-                            "an expression of type '{lastType}'") 
-                                        with (lastNode)
-                    } else {
-                        if (debug3) then {
-                            io.error.write ("\n707: {lastType} is consistent subtype of {returnType}")
-                        }
-                    }
-                }
-                if (debug3) then {
-                    io.error.write (
-                        "\n2048 type of lastNode in method " ++
-                        "{meth.nameString} is {lastNode.kind}")
-                }
-                // If last node is an object definition, the 
-                // method can be inherited from so calculate the 
-                // supertype (confidential) and put in allCache
-                if (lastNode.kind == "object") then {
-                    visitObject(lastNode)
-                    def confidType: ObjectType = allCache.at(lastNode)
-                    allCache.at(meth.nameString) put (confidType)
-                    if (debug3) then {
-                        io.error.write (
-                            "\n2053 confidType is {confidType} " ++
-                            "for {meth.nameString}")
-                    }
-                }
-            }
         }
-
-        // if method is just a member name then can record w/variables
-        if (isMember(mType)) then {
-            scope.variables.at(name) put(returnType)
-        }
-
-        // always record it as a method
-        scope.methods.at(name) put(mType)
-
-        // Declaration statement always has type Done
-        cache.at(meth) put (anObjectType.doneType)
-        false
 
     }
 
