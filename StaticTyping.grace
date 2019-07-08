@@ -920,7 +920,7 @@ def astVisitor: ast.AstVisitor is public = object {
                 //on the variable scope and method scope
                 visitImport(imp)
                 importNodes.add(imp)
-            } case {_:Object → }//Ignore non-import nodes
+            } else { }//Ignore non-import nodes
         }
 
         //removes import statements from the body of the module
