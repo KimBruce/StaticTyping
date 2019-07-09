@@ -415,6 +415,14 @@ def aMethodType: MethodTypeFactory is public = object {
             // Results in stripped down signature
             // Used for gradual typing  NOT CHECKED FOR CORRECTNESS!
             method restriction (other : MethodType) → MethodType {
+                var restrictParts: List⟦MixPart⟧ := list[]
+                restrictParts:= restrictParts(other)
+
+                return signature (restrictParts) with (typeParams)
+                                               returnType (retType)
+            }
+
+            method restrictParts (other : MethodType)-> List⟦MixPart⟧ {
                 def restrictParts: List⟦MixPart⟧ = list[]
 
                 if (other.signature.size != signature.size) then {
@@ -451,8 +459,7 @@ def aMethodType: MethodTypeFactory is public = object {
                         restrictParts.add (part)
                     }
                 }
-                return signature (restrictParts) with (typeParams)
-                                               returnType (retType)
+                return restrictParts
             }
 
             // Determines if this method is a specialisation (<:) of
@@ -579,24 +586,10 @@ def aMethodType: MethodTypeFactory is public = object {
                      io.error.write "\n457: updating method: {self}"
                 }
                 //Construct the list of mixParts of the new MethodType
-                def newMixParts : List⟦MixPart⟧ = emptyList⟦MixPart⟧
+                var newMixParts : List⟦MixPart⟧ := emptyList⟦MixPart⟧
+                newMixParts := newMixParts (replacements)
+
                 def debug3 = false
-                for (signature) do { mPart : MixPart →
-                    def newParams : List⟦Param⟧ = emptyList⟦Param⟧
-                    for (mPart.parameters) do { param : Param →
-                        def newTypeAnno : ObjectType =
-                            param.typeAnnotation.updateTypeWith(replacements)
-
-                        if (debug3) then {
-                            io.error.write("\n389 newTypeAnno is {newTypeAnno}")
-                        }
-                        newParams.add(aParam.withName (param.name)
-                                                      ofType (newTypeAnno))
-                    }
-                    newMixParts.add(aMixPartWithName(mPart.name)
-                                                      parameters(newParams))
-                }
-
                 if(debug3) then {
                      io.error.write "\n469: new mix parts {newMixParts.at (1).name}"
                      io.error.write "\n471: replace {retType} with {replacements}"
@@ -628,6 +621,28 @@ def aMethodType: MethodTypeFactory is public = object {
                 newMeth
             }
 
+            //Construct the list of mixParts of the new MethodType
+            method newMixParts (replacements) -> List⟦MixPart⟧ {
+                def newMixParts : List⟦MixPart⟧ = emptyList⟦MixPart⟧
+                def debug3 = false
+                for (signature) do { mPart : MixPart →
+                    def newParams : List⟦Param⟧ = emptyList⟦Param⟧
+                    for (mPart.parameters) do { param : Param →
+                        def newTypeAnno : ObjectType =
+                            param.typeAnnotation.updateTypeWith(replacements)
+
+                        if (debug3) then {
+                            io.error.write("\n389 newTypeAnno is {newTypeAnno}")
+                        }
+                        newParams.add(aParam.withName (param.name)
+                                                      ofType (newTypeAnno))
+                    }
+                    newMixParts.add(aMixPartWithName(mPart.name)
+                                                      parameters(newParams))
+                }
+                return newMixParts
+            }
+
             method asString → String is override { show }
         }
     }
@@ -651,66 +666,14 @@ def aMethodType: MethodTypeFactory is public = object {
         def debug3 = false
         match(node)
             case { 
-                meth :share.Method|share.Class|share.MethodSignature →     
-                // TODO: Break out cases as separate helper methods
-                def signature: List⟦MixPart⟧ = list[]
+                meth :share.Method|share.Class|share.MethodSignature → 
+
                 if (debug3) then {
-                   io.error.write "\n575: create method from {node} with type vars:{typeParams}"
-                }
-                for (meth.signature) do { part:AstNode →
-                    def params: List⟦Param⟧ = list[]
-                    if (debug) then {
-                         io.error.write "\n568 creating type for {part}"
-                    }
-
-                    // Collect parameters for each part
-                    for (part.params) do { param: AstNode →
-                        if (debug) then {
-                            io.error.write "\n571 creating type for {param}:{param.dtype}"
-                        }
-                        params.add (aParam.withName (param.value)
-                            // Used to be definedByNode
-                            ofType (anObjectType.fromDType (param.dtype) with (typeParams)))
-                    }
-
-                    // Add this mixpart to signature list
-                    signature.add (aMixPartWithName (part.name) parameters (params))
-                    if (debug3) then {
-                       io.error.write "\n579 finished with {part}"
-                    }
+                    io.error.write "\n575: create method from {node} with type vars:{typeParams}"
                 }
 
-                // Return type of the method or class
-                def rType: AstNode = match (meth)
-                    case { m : share.Method | share.Class → 
-                        m.dtype
-                }
-                    case { m : share.MethodSignature →
-                        m.rtype
-                }
-                if (debug3) then {
-                   io.error.write "\n627: creating returntype for {rType}"
-                   io.error.write "\n628: rType.kind: {rType.kind}"
-                }
+                fromNodeMethCase(meth, typeParams) 
 
-                // Full method type
-                // used to use definedByNode
-                // Add type parameters to the method type
-                def newTypeParams:  List[[String]] = emptyList[[String]]
-                if (false ≠ meth.typeParams) then {
-                    for (meth.typeParams.params) do { ident : share.Identifier →
-                        newTypeParams.add(ident.nameString)
-                    }
-                }
-        
-                def mType : MethodType = signature (signature) with (newTypeParams)
-                    returnType (anObjectType.fromDType (rType) with (typeParams))
-                if (debug3) then {
-                   io.error.write "\n588: created method type {mType}"
-                   io.error.write "\n594: created method {mType} from {node}"
-                   io.error.write "\n678: created return type {anObjectType.fromDType (rType) with (typeParams)}"
-                }
-                mType
         } 
             case { defd : share.Def | share.Var →
                 def signature: List⟦MixPart⟧ =
@@ -731,7 +694,81 @@ def aMethodType: MethodTypeFactory is public = object {
                 Exception.raise "unrecognised method node" with(node)
         }
     }
+
+    //Helper method for fromNode
+    //Handles the case where the node is of type Method, Class or MethodSignature
+    method fromNodeMethCase (meth:AstNode, typeParams: List⟦MixPart⟧) -> MethodType {
+            var signature: List⟦MixPart⟧ := list[]
+            signature := paramDef (meth, typeParams)
+
+            // Return type of the method or class
+            def rType: AstNode = match (meth)
+                case { m : share.Method | share.Class → 
+                    m.dtype
+            }
+                case { m : share.MethodSignature →
+                    m.rtype
+            }
+            if (debug) then {
+               io.error.write "\n627: creating returntype for {rType}"
+               io.error.write "\n628: rType.kind: {rType.kind}"
+            }
+
+            // Full method type
+            // used to use definedByNode
+            // Add type parameters to the method type
+            def newTypeParams:  List[[String]] = emptyList[[String]]
+            if (false ≠ meth.typeParams) then {
+                for (meth.typeParams.params) do { ident : share.Identifier →
+                    newTypeParams.add(ident.nameString)
+                }
+            }
+    
+            def mType : MethodType = signature (signature) with (newTypeParams)
+                returnType (anObjectType.fromDType (rType) with (typeParams))
+            if (debug) then {
+               io.error.write "\n588: created method type {mType}"
+               io.error.write "\n678: created return type {anObjectType.fromDType (rType) with (typeParams)}"
+            }
+            mType
+
+    }
+
+    //Helper method of fromNodeMethCase
+    //Updates the signature by looking at all of the parameters
+    //of meth
+    method paramDef (meth, typeParams ) -> List[[MixPart]] {
+            def debug1 = false
+            var signature: List⟦MixPart⟧ :=list[]
+            for (meth.signature) do { part:AstNode →
+                def params: List⟦Param⟧ = list[]
+                if (debug1) then {
+                     io.error.write "\n568 creating type for {part}"
+                }
+
+                // Collect parameters for each part
+                for (part.params) do { param: AstNode →
+                    if (debug1) then {
+                        io.error.write "\n571 creating type for {param}:{param.dtype}"
+                    }
+                    params.add (aParam.withName (param.value)
+                        // Used to be definedByNode
+                        ofType (anObjectType.fromDType (param.dtype) with (typeParams)))
+                }
+
+                // Add this mixpart to signature list
+                signature.add (aMixPartWithName (part.name) parameters (params))
+                if (debug1) then {
+                   io.error.write "\n579 finished with {part}"
+                }
+                
+            }
+            io.error.write "\n765 signature: {signature}"
+            return signature
+    }
 }
+
+
 
 // =====================
 // GENERIC TYPES
@@ -1645,72 +1682,26 @@ def anObjectType: ObjectTypeFactory is public = object {
             if (debug2) then {
                io.error.write "\n1255: case TypeLiteral: {typeLiteral}"
             }
-            def meths : Set⟦MethodType⟧ = emptySet
+            var meths : Set⟦MethodType⟧ := emptySet
             // Collect MethodTypes
-            for(typeLiteral.methods) do { mType : AstNode →
-                if (debug2) then {
-                   io.error.write "\n1259 about to add {mType.toGrace(0)}"
-                }
-                def convertedMeth:MethodType = aMethodType.fromNode(mType) with (typeParams)
-                if (debug2) then {
-                    io.error.write "\n1445 converted meth: {convertedMeth}"
-                }
-                meths.add(convertedMeth)
-                if (debug2) then {
-                   io.error.write "\n1261 finished adding"
-                }
-            }
+            meths := typeLiteralCase (typeLiteral, typeParams)
+          
             returnValue := anObjectType.fromMethods(meths)
 
         } case { op: share.Operator →
             if (debug2) then {
                io.error.write "\n1264: case operator {op}"
             }
-            // Operator takes care of type expressions: Ex. A & B, A | C
-            // What type of operator (& or |)?
-            var opValue: String := op.value
 
-            // Left side of operator
-            var left: AstNode := op.left
-            var leftType: ObjectType := fromDType(left) with (typeParams)
-            if (debug2) then {io.error.write "\n1153: leftType is {leftType}"}
-            // Right side of operator
-            var right: AstNode := op.right
-            var rightType: ObjectType := fromDType(right) with (typeParams)
-
-            match(opValue) case { "&" →
-              if (debug2) then {
-                io.error.write ("\n1158: {left} has type {leftType}, right has:"
-                    ++ " {rightType}")
-              }
-              returnValue := leftType & rightType
-              if (debug2) then {
-                 io.error.write"\n1206:returnValue for\n {left} &\n {right} is\n {returnValue}"
-              }
-            } case { "|" →
-              returnValue := leftType | rightType
-            } else {
-              ProgrammingError.raise("Expected '&' or '|', got {opValue}")
-                                                                        with(op)
-            }
+            returnValue:= opCase (op, typeParams)
 
         } case { ident : share.Identifier →
-            if (debug2) then {
+            if (debug) then {
                io.error.write "\n1292: case {ident}"
             }
-            if (typeParams.contains(ident.value)) then {
-                if (debug2) then {
-                   io.error.write "\n1269: Creating typeVble for {ident}"
-                }
-                returnValue := typeVble(ident.value)
-            } else {
-                // Look for identifier in the scope.
-                if (debug2) then {
-                   io.error.write "\n1320: not found {ident.value} in parameters: {typeParams}"
-                }
-                returnValue := fromIdentifier(ident) with (typeParams)
-            }
-            if (debug2) then {
+            returnValue := identifierCase (ident, typeParams)
+           
+            if (debug) then {
                io.error.write "\n1276: returnValue: {returnValue}"
             }
 
@@ -1726,10 +1717,127 @@ def anObjectType: ObjectTypeFactory is public = object {
             if (debug2) then {
                io.error.write "\n1309: case member {member}"
             }
+
+            returnValue := memberCase (member, typeParams)
+
+        } else {
+            ProgrammingError.raise "No case for node of kind {dtype.kind}"
+                                                                    with(dtype)
+        }
+        if (debug2) then {
+           io.error.write "\n1351: returning fromDType with {returnValue}"
+        }
+
+        returnValue
+    }
+
+    //Helper method for fromDType
+    //Handles the case where dType is an TypeLiteral
+    method typeLiteralCase (typeLiteral: share.TypeLiteral,typeParams: List[[String]]) -> Set⟦MethodType⟧ {
+            def meths : Set⟦MethodType⟧ = emptySet
+            // Collect MethodTypes
+            for(typeLiteral.methods) do { mType : AstNode →
+                if (debug) then {
+                   io.error.write "\n1259 about to add {mType.toGrace(0)}"
+                }
+                def convertedMeth:MethodType = aMethodType.fromNode(mType) with (typeParams)
+                if (debug) then {
+                    io.error.write "\n1445 converted meth: {convertedMeth}"
+                }
+                meths.add(convertedMeth)
+                if (debug) then {
+                   io.error.write "\n1261 finished adding"
+                }
+            }
+            return meths
+
+    }
+    //Helper method for fromDType
+    //Handles the case where dType is an Operator
+    method opCase (op: share.Operator,typeParams: List[[String]] ) -> ObjectType {
+            var returnValue: ObjectType
+
+            // Operator takes care of type expressions: Ex. A & B, A | C
+            // What type of operator (& or |)?
+            var opValue: String := op.value
+
+            // Left side of operator
+            var left: AstNode := op.left
+            var leftType: ObjectType := fromDType(left) with (typeParams)
+            if (debug) then {io.error.write "\n1153: leftType is {leftType}"}
+            // Right side of operator
+            var right: AstNode := op.right
+            var rightType: ObjectType := fromDType(right) with (typeParams)
+
+            match(opValue) case { "&" →
+              if (debug) then {
+                io.error.write ("\n1158: {left} has type {leftType}, right has:"
+                    ++ " {rightType}")
+              }
+              returnValue := leftType & rightType
+              if (debug) then {
+                 io.error.write"\n1206:returnValue for\n {left} &\n {right} is\n {returnValue}"
+              }
+            } case { "|" →
+              returnValue := leftType | rightType
+            } else {
+              ProgrammingError.raise("Expected '&' or '|', got {opValue}")
+                                                                        with(op)
+            }
+            return returnValue
+    }
+    //Helper method for fromDType
+    //Handles the case where dType is an Identifier
+    method identifierCase (ident : share.Identifier, typeParams: List[[String]]) -> ObjectType {
+            var returnValue: ObjectType 
+            if (typeParams.contains(ident.value)) then {
+                if (debug) then {
+                   io.error.write "\n1269: Creating typeVble for {ident}"
+                }
+                returnValue := typeVble(ident.value)
+            } else {
+                // Look for identifier in the scope.
+                if (debug) then {
+                   io.error.write "\n1320: not found {ident.value} in parameters: {typeParams}"
+                }
+                returnValue := fromIdentifier(ident) with (typeParams)
+            }
+            return returnValue
+
+    }
+    //Helper method for fromDType
+    //Handles the case where dType is a member
+    method memberCase (member : share.Member, typeParams: List[[String]]) -> ObjectType {
+            var returnValue: ObjectType
             // Name of the receiver
             var recName : String := member.receiver.toGrace(0)
             var memberCall : String := "{recName}.{member.value}"
+            // Check if the receiver consists of multiple calls
+            // Here for accessing types from imports
+            memberCall:= memberCaseHelper (recName, memberCall, member)
 
+            //checks if the member is generic
+            if(member.generics ≠ false) then {
+                //recursively process the member repackaged as a genericNode
+                returnValue := fromDType(ast.genericNode.new(ast.identifierNode.new(
+                                          memberCall, false), member.generics))
+                                            with (typeParams)
+            } else {
+                def inScope: Boolean = scope.types.exists(memberCall)
+                if(!inScope) then { 
+                    ScopingError.raise("Failed to find {memberCall}") 
+                }
+                def identifier: AstNode = ast.identifierNode.new(memberCall, false)
+                returnValue := anObjectType.fromIdentifier(identifier) with (emptyList)
+            }
+            return returnValue
+    }
+    //Helper method for memberCase
+    // Check if the receiver consists of multiple calls
+    // Here for accessing types from imports
+    method memberCaseHelper (recName':String, memberCall':String, member : share.Member) -> String {
+            var memberCall: String :=memberCall'
+            var recName : String := recName'
             // Check if the receiver consists of multiple calls
             // Here for accessing types from imports
             def period : Number = recName.indexOf(".")
@@ -1752,30 +1860,8 @@ def anObjectType: ObjectTypeFactory is public = object {
                 }
             }
 
-            //checks if the member is generic
-            if(member.generics ≠ false) then {
-                //recursively process the member repackaged as a genericNode
-                returnValue := fromDType(ast.genericNode.new(ast.identifierNode.new(
-                                          memberCall, false), member.generics))
-                                            with (typeParams)
-            } else {
-                def inScope: Boolean = scope.types.exists(memberCall)
-                if(!inScope) then { 
-                    ScopingError.raise("Failed to find {memberCall}") 
-                }
-                def identifier: AstNode = ast.identifierNode.new(memberCall, false)
-                returnValue := anObjectType.fromIdentifier(identifier) with (emptyList)
-            }
+            return memberCall
 
-        } else {
-            ProgrammingError.raise "No case for node of kind {dtype.kind}"
-                                                                    with(dtype)
-        }
-        if (debug2) then {
-           io.error.write "\n1351: returning fromDType with {returnValue}"
-        }
-
-        returnValue
     }
 
     // Currently only accept ast.genericNodes and will return the name of the
