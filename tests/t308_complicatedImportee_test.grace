@@ -9,10 +9,9 @@ type B = {
 }
 
 type C = {
-    n->Boolean
+    n -> Boolean
 }
-
 
 type D = A & B
 
-type ComplicatedType = (A  & (C | B)) |  D
+type ComplicatedType = ((A & C) | B) |  D
