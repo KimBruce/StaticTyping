@@ -196,7 +196,8 @@ class typePair (first':ObjectType, second':ObjectType) →
 type SetMethodTypePair = share.SetMethodTypePair
 
 //holds and returns two objects of type Set⟦MethodType⟧
-class setMethodTypePair (first': Set⟦MethodType⟧, second': Set⟦MethodType⟧ ) -> SetMethodTypePair {
+class setMethodTypePair (first': Set⟦MethodType⟧, 
+                    second': Set⟦MethodType⟧ ) -> SetMethodTypePair {
 
     method first → Set⟦MethodType⟧ {
         first'
@@ -386,6 +387,7 @@ def aMethodType: MethodTypeFactory is public = object {
             }
             show := "{show} → {retType}"
 
+
             method hash → Number is override {
                 nameString.hash
             }
@@ -414,7 +416,7 @@ def aMethodType: MethodTypeFactory is public = object {
             // Assume that the methods share a signature.
             // Results in stripped down signature
             // Used for gradual typing  NOT CHECKED FOR CORRECTNESS!
-            method restriction (other : MethodType) → MethodType {
+            method restriction (other : MethodType) → MethodType is confidential {
                 var restrictParts: List⟦MixPart⟧ := list[]
                 restrictParts:= restrictParts(other)
 
@@ -622,7 +624,7 @@ def aMethodType: MethodTypeFactory is public = object {
             }
 
             //Construct the list of mixParts of the new MethodType
-            method newMixParts (replacements) -> List⟦MixPart⟧ {
+            method newMixParts (replacements) -> List⟦MixPart⟧ is confidential {
                 def newMixParts : List⟦MixPart⟧ = emptyList⟦MixPart⟧
                 def debug3 = false
                 for (signature) do { mPart : MixPart →
@@ -697,7 +699,8 @@ def aMethodType: MethodTypeFactory is public = object {
 
     //Helper method for fromNode
     //Handles the case where the node is of type Method, Class or MethodSignature
-    method fromNodeMethCase (meth:AstNode, typeParams: List⟦MixPart⟧) -> MethodType {
+    method fromNodeMethCase (meth:AstNode, typeParams: List⟦MixPart⟧) 
+                            -> MethodType is confidential {
             var signature: List⟦MixPart⟧ := list[]
             signature := paramDef (meth, typeParams)
 
@@ -737,7 +740,7 @@ def aMethodType: MethodTypeFactory is public = object {
     //Helper method of fromNodeMethCase
     //Updates the signature by looking at all of the parameters
     //of meth
-    method paramDef (meth, typeParams ) -> List[[MixPart]] {
+    method paramDef (meth, typeParams ) -> List[[MixPart]] is confidential {
             def debug1 = false
             var signature: List⟦MixPart⟧ :=list[]
             for (meth.signature) do { part:AstNode →
@@ -1100,9 +1103,33 @@ def anObjectType: ObjectTypeFactory is public = object {
 
                 // Case where other is built from & or |
                 if (other'.isOp) then {
+                    return ifIsOp(other',selfOtherPair)
+                }
+
+                // TODO: Should this be an error? Probably not.
+                if (other'.isTypeVble) then {
+                   trails.remove(selfOtherPair)
+                   return answerConstructor(false)
+                }
+
+                // Should have covered all cases by now!
+                if (true) then {
+                   io.error.write "\nresolve: {resolve}"
+                   io.error.write "\nother'.resolve: {other'.resolve}"
+                   io.error.write "\nOps! Missed a case for {self} and {other'}"
+                   io.error.write "\nother'.isMeths = {other'.isMeths}"
+                   StaticTypingError.raise("Oops! Missed a case for {self} and {other'}")
+                }
+            }
+
+            //Helper method of isSubtypeHelper
+            //Handles the case where other' is an operation
+            method ifIsOp (other':ObjectType, selfOtherPair) -> Answer is confidential {
+                // Case where other is built from & or |
+                if (other'.isOp) then {
                     def left: Answer = isSubtypeHelper(other'.left)
                     def right: Answer = isSubtypeHelper(other'.right)
-                    if (debug4) then {
+                    if (debug) then {
                         io.error.write
                             "\n832: ansLeft: {left}, ansRight:{right}"
                         io.error.write
@@ -1122,23 +1149,7 @@ def anObjectType: ObjectTypeFactory is public = object {
                     }
                     return helperResult
                 }
-
-                // TODO: Should this be an error? Probably not.
-                if (other'.isTypeVble) then {
-                   trails.remove(selfOtherPair)
-                   return answerConstructor(false)
-                }
-
-                // Should have covered all cases by now!
-                if (true) then {
-                   io.error.write "\nresolve: {resolve}"
-                   io.error.write "\nother'.resolve: {other'.resolve}"
-                   io.error.write "\nOps! Missed a case for {self} and {other'}"
-                   io.error.write "\nother'.isMeths = {other'.isMeths}"
-                   StaticTypingError.raise("Oops! Missed a case for {self} and {other'}")
-                }
             }
-
 
             // Restrict types for gradual typing
             // TODO: Don't worry about this for now
@@ -1233,7 +1244,7 @@ def anObjectType: ObjectTypeFactory is public = object {
                     // and type X = T & U, then X.m: A | A' -> B & B'
                     // (X.m is a new method with '|' applied to parameters of mixed parts and '&' to return type)
 
-                    def newMeths = emptyList[[Set[[MethodType]]]]
+                    var newMeths := emptyList[[Set[[MethodType]]]]
 
                     def leftMeths = left.normalFormMeths
                     def rightMeths = right.normalFormMeths
@@ -1243,7 +1254,21 @@ def anObjectType: ObjectTypeFactory is public = object {
                         io.error.write ("\n1209: rightMeths: {rightMeths}")
                     }
 
-                    for (leftMeths) do { leftMethSet ->
+                    newMeths := ampersandCase(newMeths,leftMeths,rightMeths)
+                    return newMeths
+            }
+
+        }
+
+        //Helper method for makeWithOp
+        //Handles when op is &
+        method ampersandCase (newMeths':List[[Set[[MethodType]]]],leftMeths':List[[Set[[MethodType]]]],
+                     rightMeths':List[[Set[[MethodType]]]]) ->  List[[Set[[MethodType]]]] is confidential {
+                def newMeths = newMeths'
+                def rightMeths = rightMeths'
+                def leftMeths = leftMeths'
+
+                for (leftMeths) do { leftMethSet ->
                         for(rightMeths) do {rightMethSet ->
                             // 1. Get a new set of methods from methods in left and right type of '&' that have the same names
                             // Refer to X.m example above
@@ -1264,14 +1289,12 @@ def anObjectType: ObjectTypeFactory is public = object {
 
                             newMeths.add(newMethSet)
                         }
-                    }
-                    if(debug3) then {
-                        io.error.write ("\n1231: newMeths: {newMeths}")
-                    }
-                    newMeths
-            }
+                }
+                if(debug3) then {
+                     io.error.write ("\n1231: newMeths: {newMeths}")
+                }
+                return newMeths
         }
-
         method mergeCommonMeths(methSet: Set[[MethodType]], methSet': Set[[MethodType]]) -> Set[[MethodType]] {
             def newMethSet: Set[[MethodType]] = emptySet
             for(methSet) do { meth ->
@@ -1297,6 +1320,7 @@ def anObjectType: ObjectTypeFactory is public = object {
                     }
                 }
             }
+
             newMethSet
         }
 
@@ -1326,7 +1350,8 @@ def anObjectType: ObjectTypeFactory is public = object {
         // by combining these two types with '|'
         //
         // Refer to X.m example in normalFormMeths for a formal description
-        method newMethodType(signature: List[[MixPart]], signature': List[[MixPart]], returnType: ObjectType) -> MethodType is confidential {
+        method newMethodType(signature: List[[MixPart]], signature': List[[MixPart]],
+                         returnType: ObjectType) -> MethodType is confidential {
             def newSignature: List⟦MixPart⟧ = emptyList[[MixPart]]
             for (signature) and (signature') do { part: MixPart, part': MixPart →
                 def paramList: List[[Param]] = emptyList[[Param]]
@@ -1346,7 +1371,8 @@ def anObjectType: ObjectTypeFactory is public = object {
         }
 
         // Returns set – set' = { m | m is a method type such that m is in set and m is not in set' }
-        method methSetDifference(set: Set[[MethodType]], set': Set[[MethodType]]) -> Set[[MethodType]] is confidential {
+        method methSetDifference(set: Set[[MethodType]], set': Set[[MethodType]])
+                         -> Set[[MethodType]] is confidential {
             def newSet: Set[[MethodType]] = emptySet
             for(set) do { meth ->
                 var exists: Boolean := false
@@ -1417,7 +1443,8 @@ def anObjectType: ObjectTypeFactory is public = object {
         }
 
         // Checks if each A_{i} in A_{1} | ... | A_{n} <: B_{1} | ... | B_{m} is subtype of some B_{k}
-        method existsEachSubtype(selfObjectTypes: List[[ObjectType]], otherObjectTypes: List[[ObjectType]]) -> Answer is confidential {
+        method existsEachSubtype(selfObjectTypes: List[[ObjectType]], 
+                            otherObjectTypes: List[[ObjectType]]) -> Answer is confidential {
             def debug47: Boolean = false
             for(selfObjectTypes) doWithContinue { selfType: ObjectType, continue -> 
                 for(otherObjectTypes) do { otherType: ObjectType ->
@@ -1733,7 +1760,8 @@ def anObjectType: ObjectTypeFactory is public = object {
 
     //Helper method for fromDType
     //Handles the case where dType is an TypeLiteral
-    method typeLiteralCase (typeLiteral: share.TypeLiteral,typeParams: List[[String]]) -> Set⟦MethodType⟧ {
+    method typeLiteralCase (typeLiteral: share.TypeLiteral,
+                            typeParams: List[[String]]) -> Set⟦MethodType⟧ is confidential {
             def meths : Set⟦MethodType⟧ = emptySet
             // Collect MethodTypes
             for(typeLiteral.methods) do { mType : AstNode →
@@ -1754,7 +1782,7 @@ def anObjectType: ObjectTypeFactory is public = object {
     }
     //Helper method for fromDType
     //Handles the case where dType is an Operator
-    method opCase (op: share.Operator,typeParams: List[[String]] ) -> ObjectType {
+    method opCase (op: share.Operator,typeParams: List[[String]] ) -> ObjectType is confidential {
             var returnValue: ObjectType
 
             // Operator takes care of type expressions: Ex. A & B, A | C
@@ -1788,7 +1816,8 @@ def anObjectType: ObjectTypeFactory is public = object {
     }
     //Helper method for fromDType
     //Handles the case where dType is an Identifier
-    method identifierCase (ident : share.Identifier, typeParams: List[[String]]) -> ObjectType {
+    method identifierCase (ident : share.Identifier,
+                             typeParams: List[[String]]) -> ObjectType is confidential {
             var returnValue: ObjectType 
             if (typeParams.contains(ident.value)) then {
                 if (debug) then {
@@ -1807,7 +1836,8 @@ def anObjectType: ObjectTypeFactory is public = object {
     }
     //Helper method for fromDType
     //Handles the case where dType is a member
-    method memberCase (member : share.Member, typeParams: List[[String]]) -> ObjectType {
+    method memberCase (member : share.Member, typeParams: List[[String]]) 
+                        -> ObjectType is confidential {
             var returnValue: ObjectType
             // Name of the receiver
             var recName : String := member.receiver.toGrace(0)
@@ -1835,7 +1865,9 @@ def anObjectType: ObjectTypeFactory is public = object {
     //Helper method for memberCase
     // Check if the receiver consists of multiple calls
     // Here for accessing types from imports
-    method memberCaseHelper (recName':String, memberCall':String, member : share.Member) -> String {
+    method memberCaseHelper (recName':String, memberCall':String, 
+                            member : share.Member) -> String is confidential{
+
             var memberCall: String :=memberCall'
             var recName : String := recName'
             // Check if the receiver consists of multiple calls
