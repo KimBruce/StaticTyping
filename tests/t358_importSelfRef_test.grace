@@ -1,6 +1,6 @@
 dialect "StaticTyping"
 
-import "t354_specialisationRecursionLoop_test" as im
+import "t354a_specialisationRecursionLoop_test" as im
 
 type T = im.B & interface {
     m -> T
