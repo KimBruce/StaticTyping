@@ -1276,7 +1276,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // headers of sections of gct form keys
         // Associated values are lines beneath the header
         def gct: Dictionary⟦String, List⟦String⟧⟧ = 
-            xmodule.parseGCT(imp.path)
+            xmodule.gctDictionaryFor(imp.path)
         def impName : String = imp.nameString
         if (debug) then {
             io.error.write("\n1953 gct is {gct}")
@@ -1383,7 +1383,7 @@ def astVisitor: ast.AstVisitor is public = object {
                             to(headerName.size - typeName.size - 1)
 
                 def tokens = lex.lexLines(gct.at(key))
-                def typeDec = parser.typedec(tokens)
+                def typeDec: AstNode= parser.typedec(tokens)
 
                 if (prefx == "") then {
                     typeDec.accept(basicImportVisitor)
@@ -1410,7 +1410,7 @@ def astVisitor: ast.AstVisitor is public = object {
                 } else {
                     updateTypeScope(typeDec)
                 }
-            } elseif {key.startsWith("publicMethod:")} then {
+            } elseif { key.startsWith("publicMethod:") } then {
                 def tokens = lex.lexLines(gct.at(key))
                 def methodType = parser.methodInInterface(tokens)
                 methodType.accept(basicImportVisitor)
@@ -1468,7 +1468,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // headers of sections of gct form keys
         // Associated values are lines beneath the header
         def gct: Dictionary⟦String, List⟦String⟧⟧ = 
-            xmodule.parseGCT(dlct.value)
+            xmodule.gctDictionaryFor(dlct.value)
         def dialectName : String = dlct.nameString
         if (debug2) then {
             //io.error.write("\n1953 gct is {gct}")
