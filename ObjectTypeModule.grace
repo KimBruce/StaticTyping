@@ -766,7 +766,9 @@ def aMethodType: MethodTypeFactory is public = object {
                 }
                 
             }
-            io.error.write "\n765 signature: {signature}"
+            if(debug1) then {
+                io.error.write "\n765 signature: {signature}"
+            }
             return signature
     }
 }
@@ -937,13 +939,15 @@ def anObjectType: ObjectTypeFactory is public = object {
         // Construct a variant type from two object types.
         // Note: variant types can only be created by this constructor.
         method | (other' : ObjectType) → ObjectType {
-            if(isSubtypeOf(other')) then {
-                other'
-            } elseif{other'.isSubtypeOf(self)} then {
-                self
-            } else {
-                withOp("|", other')
-            }
+            // TODO Optimize this later
+            // if(isSubtypeOf(other')) then {
+            //     other'
+            // } elseif{other'.isSubtypeOf(self)} then {
+            //     self
+            // } else {
+            //     withOp("|", other')
+            // }
+            withOp("|", other')
         }
         
         // Construct an & type from self and other'
@@ -1009,8 +1013,7 @@ def anObjectType: ObjectTypeFactory is public = object {
             method isMeths -> Boolean {true}
 
             // Holds base methods as well as those in methods'
-            def methods : Set⟦MethodType⟧ is public = (if (base == dynamic) then {
-                emptySet } else { emptySet.addAll(base.methods) }).addAll(methods')
+            def methods : Set⟦MethodType⟧ is public = emptySet.addAll(base.methods).addAll(methods')
 
             // Returns a single-elment list of a set of methods in methods method
             method normalFormMeths -> List[[Set[[MethodType]]]] {
@@ -1113,13 +1116,7 @@ def anObjectType: ObjectTypeFactory is public = object {
                 }
 
                 // Should have covered all cases by now!
-                if (true) then {
-                   io.error.write "\nresolve: {resolve}"
-                   io.error.write "\nother'.resolve: {other'.resolve}"
-                   io.error.write "\nOps! Missed a case for {self} and {other'}"
-                   io.error.write "\nother'.isMeths = {other'.isMeths}"
-                   StaticTypingError.raise("Oops! Missed a case for {self} and {other'}")
-                }
+                StaticTypingError.raise("Oops! Missed a case for {self} and {other'}")
             }
 
             //Helper method of isSubtypeHelper
