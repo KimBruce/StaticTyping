@@ -561,6 +561,7 @@ def aMethodType: MethodTypeFactory is public = object {
             // Returns a different MethodType with the correct types
             // TODO: Modify or delete
             method apply(replacementTypes : List⟦AstNode⟧) → MethodType {
+                def debug3: Boolean = false
                 if(replacementTypes.size ≠ typeParams.size) then {
                     StaticTypingError.raise("Wrong number of type parameters " ++
                             "given when instantiating generic method " ++
@@ -568,12 +569,12 @@ def aMethodType: MethodTypeFactory is public = object {
                             "{typeParams} with {replacementTypes}.")
                 }
                 // Create a mapping of GenericTypes-to-ObjectTypes
-                if (debug) then {
+                if (debug3) then {
                      io.error.write ("\n444: updating {self} with replacement "++
                           "types: {replacementTypes}")
                 }
-                def replacements : Dictionary⟦String, AstNode⟧ =
-                           makeDictionary(typeParams,replacementTypes)
+                def replacementOT: List[[ObjectType]] = list(replacementTypes.map[[ObjectType]]{ node -> anObjectType.fromDType(node) with (emptyList)})
+                def replacements : Dictionary⟦String, ObjectType]] = makeDictionary(typeParams, replacementOT)
                 updateTypeWith(replacements)
             }
 
@@ -595,6 +596,7 @@ def aMethodType: MethodTypeFactory is public = object {
                 if(debug3) then {
                      io.error.write "\n469: new mix parts {newMixParts.at (1).name}"
                      io.error.write "\n471: replace {retType} with {replacements}"
+                     io.error.write "\n599: retType.isTypeVble: {retType.isTypeVble}"
                 }
 
                 // Update the return type of the method
@@ -701,6 +703,7 @@ def aMethodType: MethodTypeFactory is public = object {
     //Handles the case where the node is of type Method, Class or MethodSignature
     method fromNodeMethCase (meth:AstNode, typeParams: List⟦MixPart⟧) 
                             -> MethodType is confidential {
+            def debug3: Boolean = false
             var signature: List⟦MixPart⟧ := list[]
             signature := paramDef (meth, typeParams)
 
@@ -712,7 +715,7 @@ def aMethodType: MethodTypeFactory is public = object {
                 case { m : share.MethodSignature →
                     m.rtype
             }
-            if (debug) then {
+            if (debug3) then {
                io.error.write "\n627: creating returntype for {rType}"
                io.error.write "\n628: rType.kind: {rType.kind}"
             }
@@ -729,7 +732,7 @@ def aMethodType: MethodTypeFactory is public = object {
     
             def mType : MethodType = signature (signature) with (newTypeParams)
                 returnType (anObjectType.fromDType (rType) with (typeParams))
-            if (debug) then {
+            if (debug3) then {
                io.error.write "\n588: created method type {mType}"
                io.error.write "\n678: created return type {anObjectType.fromDType (rType) with (typeParams)}"
             }
@@ -855,6 +858,13 @@ def aGenericType : GenericTypeFactory is public = object{
         }
         genType
     }
+
+    def placeholder: GenericType is public = object {
+       method name -> String { "placeholder" }
+       method typeParams -> List[[typeParams]] { emptyList }
+       method oType -> ObjectType { anObjectType.placeholder }
+       method apply (_: List⟦ObjectType⟧) -> ObjectType { anObjectType.placeholder }
+    }
 }
 
 // Convert type parameters on type or method declaration to list of strings
@@ -970,7 +980,8 @@ def anObjectType: ObjectTypeFactory is public = object {
         // Replace type variables with object types using replacements
         method updateTypeWith(replacements: Dictionary[[String,ObjectType]])
                     -> ObjectType {
-            if (debug) then {
+            def debug3: Boolean = false
+            if (debug3) then {
                io.error.write "\n740 default updateType with {self}"
             }
             self
@@ -1024,7 +1035,16 @@ def anObjectType: ObjectTypeFactory is public = object {
             method getMethod(name : String) → MethodType | noSuchMethod {
                 for(normalFormMeths) do { methSet →
                     for(methSet) do { meth ->
-                        if (meth.nameString == name) then {
+                        // Strip out list containing type parameters from nameString
+                        def firstIndexOf: Number = meth.nameString.indexOf("[")
+                        def lastIndexOf: Number = meth.nameString.lastIndexOf("]")
+                        def methNameString: String = if(firstIndexOf > 0) then { 
+                            meth.nameString.substringFrom(1) to (firstIndexOf - 1) 
+                                ++ meth.nameString.substringFrom(lastIndexOf + 1) to (meth.nameString.size)
+                        } else {
+                            meth.nameString
+                        }
+                        if (methNameString == name) then {
                             return meth
                         }
                     }
@@ -1189,7 +1209,7 @@ def anObjectType: ObjectTypeFactory is public = object {
                 if (debug) then {
                    io.error.write "\n966: update methods"
                 }
-                def newMeths: List[[MethodType]] = emptyList[[MethodType]]
+                def newMeths: Set[[MethodType]] = emptySet[[MethodType]]
                 for (methods) do {m: MethodType ->
                     newMeths.add(m.updateTypeWith(replacements))
                     if (debug) then {
@@ -1992,6 +2012,7 @@ def anObjectType: ObjectTypeFactory is public = object {
             method op -> String { resolve.op }
             method asString -> String { id }
             method isPlaceholder -> Boolean { resolve.isPlaceholder }
+            method isTypeVble -> Boolean { resolve.isTypeVble }
         
             method methods -> Set⟦MethodType⟧ is public  { resolve.methods } 
 
@@ -2010,26 +2031,32 @@ def anObjectType: ObjectTypeFactory is public = object {
                 }
                 return noSuchMethod
             }
+
+            method updateTypeWith(replacements: Dictionary[[String,ObjectType]]) -> ObjectType is override {
+                resolve.updateTypeWith(replacements)
+            } 
         }
     }
 
     // ObjectType corresponding to a type variable (e.g. from generic type)
     class typeVble(name': String) -> ObjectType {
         inherit superObjectType
-        method isTypeVariable -> Boolean {true}
+        method isTypeVble -> Boolean is override {true}
         method name -> String {name'}
-        method isSubtypeOf(other': ObjectType) -> Boolean {
-            return (self == other') || {other'.isDynamic} || {other' == doneType} || (other' == base)
+        method isSubtypeHelper(other': ObjectType) -> Answer {
+            def ans: Boolean = (self == (other')) || {other'.isDynamic} || {other'.isDone}
+            return answerConstructor(ans)
         }
-        method updateTypeWith(replacements: Dictionary[[String,ObjectType]]) -> ObjectType {
-            if (debug) then {
+        method updateTypeWith(replacements: Dictionary[[String,ObjectType]]) -> ObjectType is override {
+            def debug3: Boolean = false
+            if (debug3) then {
                io.error.write "\n1411"
             }
             if(!replacements.containsKey(name)) then {
                 ProgrammingError.raise("the type variable {name} " ++
                             "was not found with matching type") 
             }
-            if (debug) then {
+            if (debug3) then {
                io.error.write "\n1409: Substituting {name} -> {replacements.at (name)} in typeVble"
             }
             replacements.at (name)
@@ -2037,6 +2064,10 @@ def anObjectType: ObjectTypeFactory is public = object {
 
         method asString -> String {
             "typeVariable: {name'}"
+        }
+
+        method == (other:Object) → Boolean {
+            asString == other.asString
         }
     }
 
