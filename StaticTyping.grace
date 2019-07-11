@@ -151,7 +151,8 @@ type RequestPart = {
 // the declaration, return the type of the result
 method check (req : share.Request) against(meth' : MethodType)
                                 → ObjectType is confidential {
-    if (debug) then {
+    def debug3: Boolean = false
+    if (debug3) then {
       io.error.write(
           "\n134 checking {req} of kind {req.kind} against {meth'}")
     }
@@ -164,6 +165,7 @@ method check (req : share.Request) against(meth' : MethodType)
             meth := meth.apply(req.generics)
         }
     }
+
     def name: String = meth.nameString
 
     for(meth.signature) and (req.parts) do 
@@ -593,20 +595,19 @@ def astVisitor: ast.AstVisitor is public = object {
         var mType: MethodType
         var returnType: ObjectType
 
-        // Enter new scope with parameters to type-check body of method
-        if (debug3) then {
-            io.error.write "\n1585: Entering scope for {meth}\n"
-        }
-
-        //returns the type parameters associated with meth: AstNode to be added to the scope
-        def transferBundle : ot.VisitMethodHelperBundle = obtainTypeParams (meth, name)
-
-        //update mType and returnType accordingly
-        mType := transferBundle.mType
-        returnType := transferBundle.returnType
-
         scope.enter {
-            def typeParams: List[[String]] = transferBundle.typeParams
+            // Enter new scope with parameters to type-check body of method
+            if (debug3) then {
+                io.error.write "\n1585: Entering scope for {meth}\n"
+            }
+
+            //returns the type parameters associated with meth: AstNode to be added to the scope
+            def transferBundle : ot.VisitMethodHelperBundle = obtainTypeParams (meth, name)
+
+            //update mType and returnType accordingly
+            mType := transferBundle.mType
+            returnType := transferBundle.returnType
+            // def typeParams: List[[String]] = transferBundle.typeParams
         }
 
         // if method is just a member name then can record w/variables
@@ -625,16 +626,23 @@ def astVisitor: ast.AstVisitor is public = object {
 
     //Helper method of visitMethod
     //returns the type parameters associated with meth: AstNode to be added to the scope
-    method obtainTypeParams (meth: AstNode, name: String)  -> ot.VisitMethodHelperBundle is confidential{
+    method obtainTypeParams (meth: AstNode, name: String)  -> ot.VisitMethodHelperBundle is confidential {
+        def debug3: Boolean = false
+
         var mType: MethodType
         var returnType: ObjectType
         var typeParams: List⟦String⟧ := emptyList⟦String⟧
 
         if (false != meth.typeParams) then {
-                if (debug) then {
-                    io.error.write "\n546st: In has type params"
-                }
-                typeParams := ot.getTypeParams(meth.typeParams)
+            if (debug3) then {
+                io.error.write "\n634: meth.signature: {meth.signature}"
+                io.error.write "\n634: meth.typeParams.params: {meth.typeParams.params}"
+                io.error.write "\n634: meth.value: {meth.value}"
+            }
+            if (debug) then {
+                io.error.write "\n546st: In has type params"
+            }
+            typeParams := ot.getTypeParams(meth.typeParams.params)
         }
         if (debug) then {
                io.error.write "\n547st: typeParams: {typeParams}"
@@ -642,6 +650,11 @@ def astVisitor: ast.AstVisitor is public = object {
 
         mType := aMethodType.fromNode(meth) with (typeParams)
         returnType := mType.retType
+
+        for (mType.typeParams) do { typeParamName : String →
+            scope.types.addToGlobalAt(typeParamName) 
+                  put (anObjectType.typeVble (typeParamName))
+        }
 
         //enter all the parameters to the scope
         for(meth.signature) do { part: AstNode →
@@ -898,7 +911,7 @@ def astVisitor: ast.AstVisitor is public = object {
                     "\n2002: method scope here is {scope.methods}"
              }
              StaticTypingError.raise(
-                 "no such method or type '{req.canonicalName}' in " ++
+                 "no such method or type '{req.nameString}' in " ++
                  "`{share.stripNewLines(rec.toGrace(0))}` of type\n" ++
                  "    '{rType}' \nin type \n  '{rType.methods}'" ++
                  " used on line {rec.line}")
@@ -955,6 +968,8 @@ def astVisitor: ast.AstVisitor is public = object {
         def importNodes: List⟦AstNode⟧ = emptyList⟦AstNode⟧
         // All statements in module
         def bodyNodes: List⟦AstNode⟧ = list(node.value)
+
+        // standardGrace node
 
         //goes through the body of the module and processes imports
         for (bodyNodes) do{ nd : AstNode →
@@ -1373,8 +1388,8 @@ def astVisitor: ast.AstVisitor is public = object {
         def importMethods : Set⟦MethodType⟧ = emptySet
 
         def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
-        gct.keys.do { key : String →
-            //example key: 'typedec-of:MyType:'
+
+        gct.keys.do { key: String -> 
             if (key.startsWith("typedec-of:")) then {
                 //gets the name of the type
                 def headerName : String = split(key, ":").at(2)
@@ -1410,7 +1425,14 @@ def astVisitor: ast.AstVisitor is public = object {
                 } else {
                     updateTypeScope(typeDec)
                 }
-            } elseif { key.startsWith("publicMethod:") } then {
+            }
+        }
+
+        gct.keys.do { key : String →
+            // Example key: 
+            // publicMethod:d:
+            // d → D⟦Number⟧MyType
+            if (key.startsWith("publicMethod:")) then {
                 def tokens = lex.lexLines(gct.at(key))
                 def methodType = parser.methodInInterface(tokens)
                 methodType.accept(basicImportVisitor)
@@ -1547,6 +1569,7 @@ method updateTypeScope(typeDec : share.TypeDeclaration) → Done
         scope.generics.addToGlobalAt(typeDec.nameString) put (genType)
         if (debug) then {
             io.error.write "\n1246: added to generics: {genType}"
+            io.error.write "\n1563: scope.generics.stack: {scope.generics.stack}"
         }
     } else {
         if (debug3) then {
@@ -1967,7 +1990,11 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
 
             // Put type placholders into the scope
             def typeName: String = node.nameString
-            scope.types.addToGlobalAt(typeName) put (ot.anObjectType.placeholder)
+            if(false ≠ node.typeParams) then {
+                scope.generics.addToGlobalAt(typeName) put (ot.aGenericType.placeholder)
+            } else {
+                scope.types.addToGlobalAt(typeName) put (ot.anObjectType.placeholder)
+            }
         }
     }
 
