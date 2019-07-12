@@ -1,0 +1,20 @@
+language:
+  - js
+compiler:
+  - clang
+env:
+  global:
+    - PREFIX=/usr/local
+    - PATH=/usr/local/bin:/usr/local/sbin:$PATH
+    - GRACE_MODULE_PATH=/usr/local/lib/grace/modules
+install:
+  - (unset PREFIX; nvm install 10.6.0)
+  - sudo chown -R $(whoami) /usr/local
+  - chmod +x install-minigrace.sh
+  - ./install-minigrace.sh
+before_script:
+  - git fetch --unshallow
+script:
+  - make
+  - make test || ( cat tests/test.js.log ; exit 1)
+sudo: false
