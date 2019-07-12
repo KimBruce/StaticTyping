@@ -148,7 +148,7 @@ do
         fi
     else
 #   this is a _fail_test
-        COMMAND="GRACE_MODULE_PATH=../../j2:../../modules $COMPILER --make --target js --dir . --noexec $tcase"
+        COMMAND="$COMPILER --make --target js --dir . --noexec $tcase"
         if eval "$COMMAND" > test-$$.log 2>&1
         then
             echo "${NUM_TESTS} ERROR: $tcase should have failed to compile"
