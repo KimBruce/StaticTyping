@@ -1596,7 +1596,7 @@ method updateMethScope(meth : AstNode) → MethodType is confidential {
 method processBody (body : List⟦AstNode⟧, 
         superclass: AstNode | false) → PublicConfidential is confidential {
             
-    def debug3: Boolean = false
+    def debug3: Boolean = true
     if (debug3) then {
         io.error.write "\n1958: superclass: {superclass}\n"
     }
@@ -1662,43 +1662,47 @@ method processBody (body : List⟦AstNode⟧,
 
         // Add new confidential method for each alias given 
         // with super class
-        def aliasMethods: List⟦MethodType⟧ = emptyList
-        for (superclass.aliases) do {aliasPair →
-            for (inheritedMethods) do {im →
-                if (debug3) then {
-                    io.error.write (
-                        "\n1144 comparing {aliasPair.oldName.value}"++
-                        " and {im.nameString}")
-                }
-                if (aliasPair.oldName.value == im.nameString) then {
-                    // Found a match for alias clause with im
-                    // Build a new method type for alias
-                    def oldSig: List⟦MixPart⟧ = im.signature
-                    var aliasNm: String := aliasPair.newName.value
-                    // unfortunately name has parens at end 
-                    // -- drop them
-                    def firstParen: Number = aliasNm.indexOf("(")
-                    if (firstParen > 0) then {
-                        aliasNm := 
-                            aliasNm.substringFrom (1) to (firstParen)
-                    }
-                    def newFirst: MixPart = 
-                            ot.aMixPartWithName (aliasNm)
-                                parameters (oldSig.at(1).parameters)
-                    def newSig: List⟦MixPart⟧ = 
-                            oldSig.copy.at (1) put (newFirst)
-                    // method type for alias
-                    def newMethType: MethodType = 
-                            ot.aMethodType.signature (newSig)
-                                        returnType (im.retType)
-                    aliasMethods.add(newMethType)
-                    if (debug3) then {
-                        io.error.write 
-                            "\n1154: just added alias {newMethType}"
-                    }
-                }
-            }
+        def aliasMethods: List⟦MethodType⟧ = addAliasMethods
+                            (superclass, inheritedMethods)
+        if (debug3) then {
+            io.error.write "\n 1668: aliasMethods: {aliasMethods}"
         }
+        // for (superclass.aliases) do {aliasPair →
+        //     for (inheritedMethods) do {im →
+        //         if (debug3) then {
+        //             io.error.write (
+        //                 "\n1144 comparing {aliasPair.oldName.value}"++
+        //                 " and {im.nameString}")
+        //         }
+        //         if (aliasPair.oldName.value == im.nameString) then {
+        //             // Found a match for alias clause with im
+        //             // Build a new method type for alias
+        //             def oldSig: List⟦MixPart⟧ = im.signature
+        //             var aliasNm: String := aliasPair.newName.value
+        //             // unfortunately name has parens at end 
+        //             // -- drop them
+        //             def firstParen: Number = aliasNm.indexOf("(")
+        //             if (firstParen > 0) then {
+        //                 aliasNm := 
+        //                     aliasNm.substringFrom (1) to (firstParen)
+        //             }
+        //             def newFirst: MixPart = 
+        //                     ot.aMixPartWithName (aliasNm)
+        //                         parameters (oldSig.at(1).parameters)
+        //             def newSig: List⟦MixPart⟧ = 
+        //                     oldSig.copy.at (1) put (newFirst)
+        //             // method type for alias
+        //             def newMethType: MethodType = 
+        //                     ot.aMethodType.signature (newSig)
+        //                                 returnType (im.retType)
+        //             aliasMethods.add(newMethType)
+        //             if (debug3) then {
+        //                 io.error.write 
+        //                     "\n1154: just added alias {newMethType}"
+        //             }
+        //         }
+        //     }
+        // }
         // Add all aliases to inherited methods, but not public ones
         inheritedMethods.addAll(aliasMethods)
 
@@ -1874,6 +1878,53 @@ method processBody (body : List⟦AstNode⟧,
     // return pair of public and internal type 
     // (so can inherit from it)
     pubConf(publicType,internalType)
+}
+
+//Add new confidential method for each alias given with super class
+//Helper method for processBody and superType
+method addAliasMethods (superclass: AstNode | false,
+         inheritedMethods : Set⟦MethodType⟧) -> List⟦MethodType⟧ is confidential{
+
+    def debug3 = true
+    def aliasMethods: List⟦MethodType⟧ = emptyList
+    for (superclass.aliases) do {aliasPair →
+        for (inheritedMethods) do {im →
+            if (debug3) then {
+                io.error.write (
+                    "\n1144 comparing {aliasPair.oldName.value}"++
+                    " and {im.nameString}")
+            }
+            if (aliasPair.oldName.value == im.nameString) then {
+                // Found a match for alias clause with im
+                // Build a new method type for alias
+                def oldSig: List⟦MixPart⟧ = im.signature
+                var aliasNm: String := aliasPair.newName.value
+                // unfortunately name has parens at end 
+                // -- drop them
+                def firstParen: Number = aliasNm.indexOf("(")
+                if (firstParen > 0) then {
+                    aliasNm := 
+                        aliasNm.substringFrom (1) to (firstParen)
+                }
+                def newFirst: MixPart = 
+                        ot.aMixPartWithName (aliasNm)
+                            parameters (oldSig.at(1).parameters)
+                def newSig: List⟦MixPart⟧ = 
+                        oldSig.copy.at (1) put (newFirst)
+                // method type for alias
+                def newMethType: MethodType = 
+                        ot.aMethodType.signature (newSig)
+                                    returnType (im.retType)
+                aliasMethods.add(newMethType)
+                if (debug3) then {
+                    io.error.write 
+                        "\n1154: just added alias {newMethType}"
+                }
+            }
+        }
+    }
+
+    return aliasMethods
 }
 
 // Construct setter method for variable declared in defd.  
