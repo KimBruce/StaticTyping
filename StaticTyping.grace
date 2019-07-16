@@ -652,7 +652,7 @@ def astVisitor: ast.AstVisitor is public = object {
         returnType := mType.retType
 
         for (mType.typeParams) do { typeParamName : String →
-            scope.types.addToGlobalAt(typeParamName) 
+            scope.types.at(typeParamName) 
                   put (anObjectType.typeVble (typeParamName))
         }
 
@@ -863,8 +863,9 @@ def astVisitor: ast.AstVisitor is public = object {
     method typeOfReceiver (rec: AstNode) -> ObjectType 
                                     is confidential {
             // type of receiver of request
+        def debug3: Boolean = false
         if (rec.nameString == "self") then {
-            if (debug) then {
+            if (debug3) then {
                 io.error.write "\n1675: looking for type of self"
             }
             scope.variables.find("$elf") butIfMissing {
@@ -872,14 +873,14 @@ def astVisitor: ast.AstVisitor is public = object {
             }
         } elseif {rec.nameString == "module()object"} then {
             // item from prelude
-            if (debug) then {
+            if (debug3) then {
                 io.error.write "\n602: looking for type of module"
             }
             scope.variables.findFromLeastRecent("$elf") butIfMissing {
                 StaticTypingError.raise "type of self missing" with(rec)
             }
         } elseif {rec.kind == "outer"} then {
-            if (debug) then {
+            if (debug3) then {
                 io.error.write "\n610: looking for type of outer"
                 io.error.write "\n611: levels: {rec.numberOfLevels}"
             }
@@ -891,7 +892,7 @@ def astVisitor: ast.AstVisitor is public = object {
             }
             outerMethodType.retType
         } else {  // general case returns type of the receiver
-            if (debug) then {
+            if (debug3) then {
                 io.error.write "\n2085 rec.kind = {rec.kind}"
             }
             typeOf(rec)
@@ -937,6 +938,8 @@ def astVisitor: ast.AstVisitor is public = object {
             io.error.write "\n684 Ready to type check {obj}***"
         }
         def pcType: PublicConfidential = scope.enter {
+            // Collect types declared in obj into new level of scope
+            collectTypes (list (obj.value))
             processBody (list (obj.value), obj.superclass)
         }
         // Record both public and confidential methods 
@@ -990,16 +993,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // Create equivalent module without imports
         def withoutImport : AstNode = ast.moduleNode.body(bodyNodes)
                         named (node.nameString) scope (node.scope)
-        if (debug3) then {
-            io.error.write ("\n818st Types scope before "++
-                "collecting types is {scope.types}")
-        }
-        // Collect types declared in module into scope
-        collectTypes (list (withoutImport.body))
-        if (debug3) then {
-            io.error.write ("\n823st Types scope after "++
-                "collecting types is {scope.types}")
-        }
+
         // type check the remaining object (w/o import statements)
         visitObject (withoutImport)
     }
@@ -1566,7 +1560,7 @@ method updateTypeScope(typeDec : share.TypeDeclaration) → Done
         }
         def genType : GenericType = aGenericType.fromTypeDec(typeDec)
         // oType := genType.oType
-        scope.generics.addToGlobalAt(typeDec.nameString) put (genType)
+        scope.generics.at(typeDec.nameString) put (genType)
         if (debug) then {
             io.error.write "\n1246: added to generics: {genType}"
             io.error.write "\n1563: scope.generics.stack: {scope.generics.stack}"
@@ -1578,18 +1572,21 @@ method updateTypeScope(typeDec : share.TypeDeclaration) → Done
         // DEBUG: Was definedByNode
         def typeName: String = typeDec.nameString
         oType := anObjectType.fromDType (typeDec.value) with (emptyList[[String]])
-        scope.types.addToGlobalAt(typeName) put(oType)
+        scope.types.at(typeName) put(oType)
         if (debug3) then {
             io.error.write "\n1252: added to types: {oType}"
         }
     }
 }
 
-
-//TODO: Should this keep track of type parameters??
 method updateMethScope(meth : AstNode) → MethodType is confidential {
-    def mType : MethodType = 
-        aMethodType.fromNode(meth) with (emptyList[[String]])
+    var mType
+    if(false != meth.typeParams) then {
+        def typeParams = ot.getTypeParams(meth.typeParams.params)
+        mType := aMethodType.fromNode(meth) with (typeParams)  
+    } else {
+        mType := aMethodType.fromNode(meth) with (emptyList[[String]])  
+    }
     scope.methods.at(mType.nameString) put (mType)
     mType
 }
@@ -1784,6 +1781,7 @@ method processBody (body : List⟦AstNode⟧,
                 // class is compatible
                 if (debug3) then {
                     io.error.write "\n1438 in method case"
+                    io.error.write "\n1781 meth.typeParams: {meth.typeParams}"
                 }
                 def mType: MethodType = updateMethScope(meth)
                 if (debug3) then {
@@ -1970,6 +1968,11 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
     def debug3 = false
     def typeDecs: List[[share.TypeDeclaration]] = emptyList[[share.TypeDeclaration]]
 
+    if (debug3) then {
+        io.error.write ("\n818st Types scope before "++
+            "collecting types is {scope.types}")
+    }
+
     // Collect all type declarations into typeDecs and insert their
     // left-hand side into scope with placholders
     for(nodes) do { node -> 
@@ -1991,9 +1994,9 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
             // Put type placholders into the scope
             def typeName: String = node.nameString
             if(false ≠ node.typeParams) then {
-                scope.generics.addToGlobalAt(typeName) put (ot.aGenericType.placeholder)
+                scope.generics.at(typeName) put (ot.aGenericType.placeholder)
             } else {
-                scope.types.addToGlobalAt(typeName) put (ot.anObjectType.placeholder)
+                scope.types.at(typeName) put (ot.anObjectType.placeholder)
             }
         }
     }
@@ -2006,6 +2009,11 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
     // Update type placeholders in the scope to real types 
     for(typeDecs) do { typeDec →
         updateTypeScope(typeDec)
+    }
+
+    if (debug3) then {
+        io.error.write ("\n823st Types scope after "++
+            "collecting types is {scope.types}")
     }
 }
 
