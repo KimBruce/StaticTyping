@@ -8,6 +8,7 @@ import "StaticTyping" as st
 import "ObjectTypeModule" as ot
 import "identifierresolution" as ir
 import "SharedTypes" as sh
+import "ScopeModule" as sc
 
 def input : String = 
     "type Foo = \{\n" ++
@@ -33,7 +34,7 @@ def inputTree = ir.resolve(module)
 // Returns a list of AstNodes corresponding to each testBlock
 def nodes = inputTree.value
 
-inputTree.accept(st.astVisitor)
+// inputTree.accept(st.astVisitor)
 
 def typeFoo: ast.AstNode = nodes.at(1)
 def typeBar: ast.AstNode = nodes.at(2)

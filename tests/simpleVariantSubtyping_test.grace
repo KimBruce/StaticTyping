@@ -31,8 +31,8 @@ def typeNodeB : ast.AstNode = nodes.at(2)
 
 inputTree.accept(st.astVisitor)
 
-def A : ot.ObjectType = sm.scope.types.stack.last.at("A")
-def B : ot.ObjectType = sm.scope.types.stack.last.at("B")
+def A : ot.ObjectType = ot.anObjectType.fromDType(typeNodeA.value) with (emptyList)
+def B : ot.ObjectType = ot.anObjectType.fromDType(typeNodeB.value) with (emptyList)
 
 print("{A.isSubtypeOf(B)}")
 print("{B.isSubtypeOf(A)}")

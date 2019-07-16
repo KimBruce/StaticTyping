@@ -29,6 +29,7 @@ def input : String =
     "type G = A | B"
 
 //Turns input into an abstract syntax tree (ast)
+util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
 def inputTree = ir.resolve(module)
@@ -46,10 +47,10 @@ def typeNodeG : ast.AstNode = nodes.at(6)
 
 inputTree.accept(st.astVisitor)
 
-def A : ot.ObjectType = sm.scope.types.stack.last.at("A")
-def C : ot.ObjectType = sm.scope.types.stack.last.at("C")
-def B : ot.ObjectType = sm.scope.types.stack.last.at("B")
-def G : ot.ObjectType = sm.scope.types.stack.last.at("G")
+def A : ot.ObjectType = ot.anObjectType.fromDType(typeNodeA.value) with (emptyList)
+def C : ot.ObjectType = ot.anObjectType.fromDType(typeNodeC.value) with (emptyList)
+def B : ot.ObjectType = ot.anObjectType.fromDType(typeNodeB.value) with (emptyList)
+def G : ot.ObjectType = ot.anObjectType.fromDType(typeNodeG.value) with (emptyList)
 
 // print("\nB.normalMeths: {B.normalMeths}")
 
