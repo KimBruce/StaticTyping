@@ -44,7 +44,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = false
+def debug: Boolean = false 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
@@ -521,8 +521,11 @@ def astVisitor: ast.AstVisitor is public = object {
             //Build return type collection
             def blockReturnType : ObjectType = 
                                         objectTypeFromBlock(block)
-            if (debug) then {io.error.write 
-                        "\n460: blockReturnType is {blockReturnType}"}
+
+            if (debug) then {io.error.write (
+                        "\n460: blockReturnType is {blockReturnType}")
+            }
+
             if (returnTypesList.contains (blockReturnType).not) then {
                returnTypesList.add(blockReturnType)
             }
@@ -542,8 +545,7 @@ def astVisitor: ast.AstVisitor is public = object {
             // Type returned by variant of all return types in cases
             returnType := ot.fromObjectTypeList(returnTypesList)
             if (debug) then {
-               io.error.write "\n475: no finally: " ++
-                    "using types from try catch: {returnType}"
+               io.error.write ("\n475: no finally: " ++ "using types from try catch: {returnType}")
             }
         }
 
@@ -1596,7 +1598,7 @@ method updateMethScope(meth : AstNode) → MethodType is confidential {
 method processBody (body : List⟦AstNode⟧, 
         superclass: AstNode | false) → PublicConfidential is confidential {
             
-    def debug3: Boolean = true
+    def debug3: Boolean = false
     if (debug3) then {
         io.error.write "\n1958: superclass: {superclass}\n"
     }
@@ -1604,128 +1606,11 @@ method processBody (body : List⟦AstNode⟧,
     // Process inherited methods
     var inheritedMethods: Set⟦MethodType⟧ := emptySet
     def hasInherits = false ≠ superclass
-    var publicSuperType: ObjectType := anObjectType.base
-    def superType: ObjectType = if(hasInherits) then {
-        def inheriting: AstNode = superclass
-        // TODO: make sure no self in "inherit" clause??
 
-        if (debug3) then {
-            io.error.write 
-                "\nGT1981: checking types of inheriting = {inheriting}\n"
-        }
-        var name: String := inheriting.value.nameString
-        if (name.contains "$object(") then {
-            // fix glitch with method name in inheritance clause
-            // inheriting.value.parts.removeLast
-            def dollarAt = name.indexOf("$object(")
-            name := name.substringFrom(1) to (dollarAt - 1)
-        }
-
-        // Handle exclusions and aliases
-        // Unfortunately no type info with exclusions, so if code 
-        // says exclude p(s:String) and p in subclass takes a Number, 
-        // it will be dropped without any warning of the error.
-        var inheritedType: ObjectType := allCache.at(name)
-        inheritedMethods := inheritedType.methods.copy
-        publicSuperType := typeOf(inheriting.value)
-        // All public methods from supre type
-        var pubInheritedMethods := publicSuperType.methods.copy
-        // methods to drop
-        var droppedMethods: List[[MethodType]] := 
-                                emptyList[[MethodType]]
-        var pubDroppedMethods: List[[MethodType]] := 
-                                emptyList[[MethodType]]
-        // Throw away methods being excluded
-        for (superclass.exclusions) do {ex →
-            // First throw away from list of all inherited methods
-            for (inheritedMethods) do {im →
-                if (ex.nameString == im.nameString) then {
-                    if (debug) then {
-                        io.error.write "\n1126 removing {im}"
-                    }
-                    droppedMethods.add(im)
-                }
-            }
-            // Throw away from public inherited methods
-            for (pubInheritedMethods) do {im →
-                if (ex.nameString == im.nameString) then {
-                    pubDroppedMethods.add(im)
-                }
-            }
-        }
-        inheritedMethods.removeAll(droppedMethods)
-        pubInheritedMethods.removeAll(pubDroppedMethods)
-
-        if (debug3) then {
-            io.error.write "aliases: {superclass.aliases}"
-        }
-
-        // Add new confidential method for each alias given 
-        // with super class
-        def aliasMethods: List⟦MethodType⟧ = addAliasMethods
-                            (superclass, inheritedMethods)
-        if (debug3) then {
-            io.error.write "\n 1668: aliasMethods: {aliasMethods}"
-        }
-        // for (superclass.aliases) do {aliasPair →
-        //     for (inheritedMethods) do {im →
-        //         if (debug3) then {
-        //             io.error.write (
-        //                 "\n1144 comparing {aliasPair.oldName.value}"++
-        //                 " and {im.nameString}")
-        //         }
-        //         if (aliasPair.oldName.value == im.nameString) then {
-        //             // Found a match for alias clause with im
-        //             // Build a new method type for alias
-        //             def oldSig: List⟦MixPart⟧ = im.signature
-        //             var aliasNm: String := aliasPair.newName.value
-        //             // unfortunately name has parens at end 
-        //             // -- drop them
-        //             def firstParen: Number = aliasNm.indexOf("(")
-        //             if (firstParen > 0) then {
-        //                 aliasNm := 
-        //                     aliasNm.substringFrom (1) to (firstParen)
-        //             }
-        //             def newFirst: MixPart = 
-        //                     ot.aMixPartWithName (aliasNm)
-        //                         parameters (oldSig.at(1).parameters)
-        //             def newSig: List⟦MixPart⟧ = 
-        //                     oldSig.copy.at (1) put (newFirst)
-        //             // method type for alias
-        //             def newMethType: MethodType = 
-        //                     ot.aMethodType.signature (newSig)
-        //                                 returnType (im.retType)
-        //             aliasMethods.add(newMethType)
-        //             if (debug3) then {
-        //                 io.error.write 
-        //                     "\n1154: just added alias {newMethType}"
-        //             }
-        //         }
-        //     }
-        // }
-        // Add all aliases to inherited methods, but not public ones
-        inheritedMethods.addAll(aliasMethods)
-
-        //Node of inheritedType could be inheriting.value 
-        // or inheriting
-        inheritedType := anObjectType.fromMethods(inheritedMethods)
-        publicSuperType := 
-                anObjectType.fromMethods(pubInheritedMethods)
-
-        if (debug3) then {
-            io.error.write 
-                "\1144: public super type: {publicSuperType}"
-            io.error.write 
-                "\n1145: inherited type: {inheritedType}"
-        }
-        inheritedType
-    } else {
-        anObjectType.base
-    }
-    // Finished computing supertype, but don't associate with "super"
-    if (debug3) then {
-        io.error.write "\n1989: superType is {superType}\n"
-    }
+    //CREATE SUPERTYPE OBJECTTYPE
+    def transferPairTwo : PublicConfidential = superType (superclass)
+    def superType: ObjectType = transferPairTwo.publicType
+    def publicSuperType : ObjectType = transferPairTwo.inheritableType
 
     // set meaning of "outer:
     def outerVal: ObjectType = scope.variables.find("$elf") 
@@ -1740,126 +1625,12 @@ method processBody (body : List⟦AstNode⟧,
     var internalType: ObjectType
 
     // Type including only public features
-    def publicType: ObjectType = if (superType.isDynamic) then {
-        // if supertype is dynamic, then so is public type
-        scope.variables.at("$elf") put (superType)
-        superType
-    } else {
-        // Collect the method types to add the two self types.
-        // Start with "isMe" method
-        def isParam: Param = 
-            aParam.withName("other") ofType (anObjectType.base)
-        def part: MixPart = 
-            ot.aMixPartWithName ("isMe") parameters (list[isParam])
-
-        // add isMe method as confidential
-        def isMeMeth: MethodType = 
-            aMethodType.signature(list[part]) 
-                                returnType (anObjectType.boolean)
-        def outerMeth: MethodType = 
-                aMethodType.member("outer") ofType (outerVal)
-        def publicMethods: Set⟦MethodType⟧ =
-                publicSuperType.methods.copy
-        def allMethods: Set⟦MethodType⟧ = 
-                            superType.methods.copy
-        // isMe is confidential
-        allMethods.add(isMeMeth)
-        allMethods.add(outerMeth)
-        // collect embedded types in these dictionaries
-        def publicTypes: Dictionary⟦String,ObjectType⟧ =
-                                emptyDictionary
-        def allTypes: Dictionary⟦String,ObjectType⟧ =
-                                emptyDictionary
-
-        // gather types for all methods in object (including 
-        // implicit ones for vars and defs)
-        for(body) do { stmt: AstNode →
-            if (debug3) then {
-                io.error.write "\n2009: processing {stmt}"
-                io.error.write 
-                    "\n1375: stmt's toGrace is: {stmt.toGrace(0)}"
-            }
-
-            match(stmt) case { meth : share.Method →
-                // ensure any method overriding one from super 
-                // class is compatible
-                if (debug3) then {
-                    io.error.write "\n1438 in method case"
-                    io.error.write "\n1781 meth.typeParams: {meth.typeParams}"
-                }
-                def mType: MethodType = updateMethScope(meth)
-                if (debug3) then {
-                    io.error.write 
-                        "\n1440: found method type {mType}"
-                }
-                checkOverride(mType,allMethods,publicMethods,meth)
-
-                // add new method to the collection of methods
-                allMethods.add(mType)
-                if (debug3) then {
-                    io.error.write 
-                        "\n1158 Adding {mType} to allMethods"
-                    io.error.write 
-                        "\n1159 AllMethods: {allMethods}"
-                }
-                if(isPublic(meth)) then {
-                    publicMethods.add(mType)
-                }
-
-                // A method that is a Member has no parameter 
-                // and is identical to a variable, so we also 
-                // store it inside the variables scope
-                if (isMember(mType)) then {
-                    scope.variables.at(mType.name) put(mType.retType)
-                }
-
-            } case { defd : share.Def | share.Var →
-                // Create type of method giving access 
-                // to def or var value
-                def mType: MethodType = aMethodType.fromNode(defd)
-                                         with (emptyList[[String]])
-                if (allMethods.contains(mType)) then {
-                    StaticTypingError.raise ("A var or def {mType} "
-                        ++ "on line {defd.line} may not override "++
-                        "an existing method from the superclass}")
-                                                with (mType)
-                }
-                allMethods.add(mType)
-                if (debug3) then {
-                    io.error.write "\n1177 AllMethods: {allMethods}"
-                }
-                //create method to access def/var if it is readable
-                if(defd.isReadable) then {
-                    publicMethods.add(mType)
-                }
-
-                //update scope with reference to def/var
-                scope.methods.at(mType.name) put(mType)
-                scope.variables.at(mType.name) put(mType.retType)
-                // add setter methods if variable in defd
-                addSetterMethodFor(defd, publicMethods, allMethods)
-
-            } case { td : share.TypeDeclaration →
-                //Now does nothing if given type declaration; might make this
-                //raise an error as embedded types are disallowed.
-            } else {
-                    if (debug3) then {
-                        io.error.write"\n2617 ignored {stmt}"
-                    }
-            }
-        }
-        if (debug3) then {
-            io.error.write "\n1201 allMethods: {allMethods}"
-        }
-        internalType := anObjectType.fromMethods(allMethods)
-        // Type of self as a receiver of method calls
-        scope.variables.at("$elf") put (internalType)
-        if (debug3) then {
-            io.error.write "\n1204: Internal type is {internalType}"
-        }
-        anObjectType.fromMethods(publicMethods)
-    }
-    // end creating publicType
+    //CREATE THE PUBLICTYPE OBJECT, type including only public features
+    //Also update internalType
+    def transferPairThree : PublicConfidential= 
+            publicType (body,superType, publicSuperType, outerVal)
+    def publicType: ObjectType = transferPairThree.publicType
+    internalType := transferPairThree.inheritableType
 
     // External type for self -- i.e., if self is used as a parameter
     // in a method request -- can't see confidential features
@@ -1867,6 +1638,7 @@ method processBody (body : List⟦AstNode⟧,
     if (debug3) then {
         io.error.write "\n2744: Type of self is {publicType}"
     }
+
     // Type-check the object body, dropping the inherit clause
     typeCheckObjectBody (hasInherits, body)
 
@@ -1885,7 +1657,7 @@ method processBody (body : List⟦AstNode⟧,
 method addAliasMethods (superclass: AstNode | false,
          inheritedMethods : Set⟦MethodType⟧) -> List⟦MethodType⟧ is confidential{
 
-    def debug3 = true
+    def debug3 = false
     def aliasMethods: List⟦MethodType⟧ = emptyList
     for (superclass.aliases) do {aliasPair →
         for (inheritedMethods) do {im →
@@ -1927,6 +1699,342 @@ method addAliasMethods (superclass: AstNode | false,
     return aliasMethods
 }
 
+//Create superType: ObjectType, type including the features of the superClass
+//Helper method for processBody
+method superType (superclass: AstNode | false)  -> PublicConfidential is confidential{
+
+    def debug3 = false
+    def hasInherits = false ≠ superclass
+    var inheritedMethods: Set⟦MethodType⟧ := emptySet
+    var publicSuperType: ObjectType := anObjectType.base
+
+    def superType: ObjectType = if(hasInherits) then {
+        def transfers: PublicConfidential = superTypeWithInherits (inheritedMethods, publicSuperType, superclass)
+        publicSuperType := transfers.publicType
+        transfers.inheritableType
+    } else {
+        anObjectType.base
+    }
+    // Finished computing supertype, but don't associate with "super"
+    if (debug3) then {
+        io.error.write "\n1989: superType is {superType}\n"
+    }
+
+    return pubConf (superType, publicSuperType)
+   
+}
+//Throw away excluded methods from the inheritedMethods list and the pubInheritedMethods list
+//Helper method of processBody and superType
+method throwAwayExcludedMethods (superclass: AstNode | false,
+        inheritedMethods': Set⟦MethodType⟧, pubInheritedMethods': Set⟦MethodType⟧)
+        -> ot.SetMethodTypePair is confidential {
+
+    var inheritedMethods := inheritedMethods'
+    var pubInheritedMethods := pubInheritedMethods'
+    var droppedMethods: List[[MethodType]] := 
+                                emptyList[[MethodType]]
+    var pubDroppedMethods: List[[MethodType]] := 
+                                emptyList[[MethodType]]
+    // Throw away methods being excluded
+    for (superclass.exclusions) do {ex →
+        // First throw away from list of all inherited methods
+        for (inheritedMethods) do {im →
+            if (ex.nameString == im.nameString) then {
+                if (debug) then {
+                    io.error.write "\n1126 removing {im}"
+                }
+                droppedMethods.add(im)
+            }
+        }
+        // Throw away from public inherited methods
+        for (pubInheritedMethods) do {im →
+            if (ex.nameString == im.nameString) then {
+                pubDroppedMethods.add(im)
+            }
+        }
+    }
+    inheritedMethods.removeAll(droppedMethods)
+    pubInheritedMethods.removeAll(pubDroppedMethods)
+
+    if (debug) then {
+        io.error.write "aliases: {superclass.aliases}"
+    }
+
+    return ot.setMethodTypePair (inheritedMethods, pubInheritedMethods)
+    
+}
+
+//Create superType when superClass is not false
+method superTypeWithInherits (inheritedMethods': Set⟦MethodType⟧, publicSuperType': ObjectType, superclass: AstNode) -> PublicConfidential {
+
+    var inheritedMethods := inheritedMethods'
+    var publicSuperType := publicSuperType'
+    def inheriting: AstNode = superclass
+    // TODO: make sure no self in "inherit" clause??
+
+    if (debug) then {
+        io.error.write 
+            "\nGT1981: checking types of inheriting = {inheriting}\n"
+    }
+    var name: String := inheriting.value.nameString
+    if (name.contains "$object(") then {
+    
+        io.error.write 
+            "\n inheriting.value.parts : {inheriting.value.parts}"
+
+
+        // fix glitch with method name in inheritance clause
+        //inheriting.value.parts.removeLast
+        def dollarAt = name.indexOf("$object(")
+        name := name.substringFrom(1) to (dollarAt - 1)    
+    }
+
+    // Handle exclusions and aliases
+    // Unfortunately no type info with exclusions, so if code 
+    // says exclude p(s:String) and p in subclass takes a Number, 
+    // it will be dropped without any warning of the error.
+    var inheritedType: ObjectType := allCache.at(name)
+    inheritedMethods := inheritedType.methods.copy
+    publicSuperType := typeOf(inheriting.value)
+
+    //All public methods from super type
+    var pubInheritedMethods := publicSuperType.methods.copy
+
+    def transferPairFour = throwAwayExcludedMethods 
+            (superclass, inheritedMethods, pubInheritedMethods)
+    inheritedMethods :=  transferPairFour.first
+    pubInheritedMethods :=transferPairFour.second
+
+    // Add new confidential method for each alias given 
+    // with super class
+    def aliasMethods: List⟦MethodType⟧ = addAliasMethods 
+            (superclass, inheritedMethods)
+  
+    // Add all aliases to inherited methods, but not public ones
+    inheritedMethods.addAll(aliasMethods)
+
+    //Node of inheritedType could be inheriting.value 
+    // or inheriting
+    inheritedType := anObjectType.fromMethods(inheritedMethods)
+    publicSuperType := 
+            anObjectType.fromMethods(pubInheritedMethods)
+
+    if (debug) then {
+        io.error.write 
+            "\1144: public super type: {publicSuperType}"
+        io.error.write 
+            "\n1145: inherited type: {inheritedType}"
+    }
+
+    pubConf (publicSuperType,inheritedType)
+}
+
+//Create type including only public features
+//helper method of processBody
+method publicType (body : List⟦AstNode⟧, superType: ObjectType,
+        publicSuperType: ObjectType,  outerVal: ObjectType) 
+        -> PublicConfidential is confidential{
+
+    // Type including all confidential features
+    var internalType : ObjectType 
+
+    def publicType: ObjectType = if (superType.isDynamic) then {
+        // if supertype is dynamic, then so is public type
+        scope.variables.at("$elf") put (superType)
+        superType
+    } else {
+        
+        var allMethods: Set⟦MethodType⟧
+        var publicMethods: Set⟦MethodType⟧
+
+        def transferBundle: ot.PublicTypeReturnBundle = 
+                publicTypeElse(outerVal, publicSuperType, superType, body)
+        allMethods := transferBundle.allMethods
+        publicMethods := transferBundle.publicMethods
+        internalType:= transferBundle.internalType
+        anObjectType.fromMethods(publicMethods)
+    }
+
+    return pubConf (publicType, internalType)
+    //return ot.typePair (publicType, internalType)
+    
+}
+
+//Helper method of publicType
+//Handles the else case where superType is not dynamic 
+method publicTypeElse (outerVal, publicSuperType,superType, body) -> ot.PublicTypeReturnBundle {
+
+        var publicMethods : Set⟦MethodType⟧
+        var allMethods : Set⟦MethodType⟧
+        //var internalType : ObjectType
+
+        def isParam: Param = 
+            aParam.withName("other") ofType (anObjectType.base)
+        def part: MixPart = 
+            ot.aMixPartWithName ("isMe") parameters (list[isParam])
+
+        // add isMe method as confidential
+        def isMeMeth: MethodType = 
+            aMethodType.signature(list[part]) 
+                                returnType (anObjectType.boolean)
+        def outerMeth: MethodType = 
+                aMethodType.member("outer") ofType (outerVal)
+        publicMethods := publicSuperType.methods.copy
+        allMethods:= superType.methods.copy
+        // isMe is confidential
+        allMethods.add(isMeMeth)
+        allMethods.add(outerMeth)
+        // collect embedded types in these dictionaries
+        def publicTypes: Dictionary⟦String,ObjectType⟧ =
+                                emptyDictionary
+        def allTypes: Dictionary⟦String,ObjectType⟧ =
+                                emptyDictionary
+
+        // gather types for all methods in object (including 
+        // implicit ones for vars and defs)
+        def transferPair: ot.SetMethodTypePair =
+                 gatherTypesForMethods (body, allMethods, publicMethods)
+        publicMethods := transferPair.first
+        allMethods := transferPair.second
+
+
+        if (debug) then {
+            io.error.write "\n1201 allMethods: {allMethods}"
+        }
+
+        var internalType: ObjectType := anObjectType.fromMethods(allMethods)
+
+        // Type of self as a receiver of method calls
+        scope.variables.at("$elf") put (internalType)
+        if (debug) then {
+            io.error.write "\n1204: Internal type is {internalType}"
+        }
+
+        return ot.publicTypeReturnBundle (allMethods, publicMethods,internalType)
+}
+
+//Gather types for all methods in object (including 
+//implicit ones for vars and defs), ensuring compatible overriding if applicable
+//and storing in the scope in the progress
+//Helper method for processbody and publicType
+method gatherTypesForMethods (body : List⟦AstNode⟧, allMethods' :Set⟦MethodType⟧,
+        publicMethods' : Set⟦MethodType⟧) -> ot.SetMethodTypePair  is confidential{
+
+    var allMethods := allMethods'
+    var publicMethods := publicMethods'
+    def debug3 = false
+
+    for(body) do { stmt: AstNode →
+            if (debug3) then {
+                io.error.write "\n2009: processing {stmt}"
+                io.error.write 
+                    "\n1375: stmt's toGrace is: {stmt.toGrace(0)}"
+            }
+
+            match(stmt) case { meth : share.Method →
+
+                def transferPair: ot.SetMethodTypePair = 
+                        methCase (meth, allMethods, publicMethods)
+                publicMethods := transferPair.first
+                allMethods := transferPair.second
+              
+            } case { defd : share.Def | share.Var →
+                // Create type of method giving access 
+                // to def or var value
+
+                def transferPair: ot.SetMethodTypePair = 
+                        defCase(defd, allMethods, publicMethods)
+                publicMethods := transferPair.first
+                allMethods := transferPair.second
+                        
+
+            } case { td : share.TypeDeclaration →
+                //Now does nothing if given type declaration; might make this
+                //raise an error as embedded types are disallowed.
+            } else {
+                if (debug3) then {
+                        io.error.write"\n2617 ignored {stmt}"
+                }
+            }
+    }
+
+    return ot.setMethodTypePair (publicMethods, allMethods)
+    
+}
+//Helper method for gatherTypesForMethods
+//Handles the case where stmt is a share. Method
+method methCase (meth, allMethods', publicMethods') -> ot.SetMethodTypePair is confidential{
+
+    var allMethods := allMethods'
+    var publicMethods := publicMethods'
+    if (debug) then {
+            io.error.write "\n1438 in method case"
+    }
+    def mType: MethodType = updateMethScope(meth)
+    if (debug) then {
+        io.error.write 
+            "\n1440: found method type {mType}"
+    }
+    checkOverride(mType,allMethods,publicMethods,meth)
+
+    // add new method to the collection of methods
+    allMethods.add(mType)
+    if (debug) then {
+        io.error.write 
+            "\n1158 Adding {mType} to allMethods"
+        io.error.write 
+            "\n1159 AllMethods: {allMethods}"
+    }
+    if(isPublic(meth)) then {
+        publicMethods.add(mType)
+    }
+
+    // A method that is a Member has no parameter 
+    // and is identical to a variable, so we also 
+    // store it inside the variables scope
+    if (isMember(mType)) then {
+        scope.variables.at(mType.name) put(mType.retType)
+    }
+
+    return ot.setMethodTypePair(publicMethods, allMethods)
+
+}
+
+//Helper method for gatherTypesForMethods
+//Handles the case where stmt is a share.Def | share.Var
+//Create type of method giving access to def or var value
+method defCase (defd, allMethods', publicMethods') -> ot.SetMethodTypePair is confidential{
+    var allMethods := allMethods'
+    var publicMethods := publicMethods'
+
+    def mType: MethodType = aMethodType.fromNode(defd)
+                                         with (emptyList[[String]])
+    if (allMethods.contains(mType)) then {
+        StaticTypingError.raise ("A var or def {mType} "
+            ++ "on line {defd.line} may not override "++
+            "an existing method from the superclass}")
+                                with (mType)
+    }
+    allMethods.add(mType)
+    if (debug) then {
+        io.error.write "\n1177 AllMethods: {allMethods}"
+    }
+    //create method to access def/var if it is readable
+    if(defd.isReadable) then {
+        publicMethods.add(mType)
+    }
+
+    //update scope with reference to def/var
+    scope.methods.at(mType.name) put(mType)
+    scope.variables.at(mType.name) put(mType.retType)
+    // add setter methods if variable in defd
+    addSetterMethodFor(defd, publicMethods, allMethods)
+    
+
+    return ot.setMethodTypePair (publicMethods, allMethods)
+    
+
+}
 // Construct setter method for variable declared in defd.  
 // Add to allMethods, and, if writeable, to publicMethods.
 method addSetterMethodFor(defd: share.Var | share.Def,
@@ -1961,6 +2069,11 @@ method addSetterMethodFor(defd: share.Var | share.Def,
 // Make sure all statements in object body type-check
 method typeCheckObjectBody(hasInherits: Boolean, body: List⟦AstNode⟧)
                                     -> Done is confidential {
+    if (debug) then {
+       io.error.write 
+                "\n1980: hasInherits:{hasInherits}"   
+    }                                   
+                                 
     // Type-check the object body, dropping the inherit clause
     def indices: Collection⟦Number⟧ = if(hasInherits) then {
         2..body.size
