@@ -1870,10 +1870,11 @@ def anObjectType: ObjectTypeFactory is public = object {
                                           memberCall, false), member.generics))
                                             with (typeParams)
             } else {
-                def inScope: Boolean = scope.types.exists(memberCall)
-                if(!inScope) then { 
-                    ScopingError.raise("Failed to find {memberCall}") 
-                }
+                // TODO Is this necessary? Should already be handled in fromIdentifier
+                // def inScope: Boolean = scope.types.exists(memberCall)
+                // if(!inScope) then { 
+                //    ScopingError.raise("Failed to find {memberCall}") 
+                // }
                 def identifier: AstNode = ast.identifierNode.new(memberCall, false)
                 returnValue := anObjectType.fromIdentifier(identifier) with (emptyList)
             }
