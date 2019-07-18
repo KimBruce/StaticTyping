@@ -28,11 +28,11 @@ def inputTree = ir.resolve(module)
 // Returns a list of AstNodes
 def nodes  = inputTree.value
 
-print(nodes)
+//print(nodes)
 
-for(nodes) do { node ->
-    print("\nnode.asString: {node.asString}")
-}
+// for(nodes) do { node ->
+//     print("\nnode.asString: {node.asString}")
+// }
 
 
 def Anode = nodes.filter{n -> n.asString == "typedec A"}.first
