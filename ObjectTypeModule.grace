@@ -1964,7 +1964,7 @@ def anObjectType: ObjectTypeFactory is public = object {
             if (debug) then {
                 io.error.write("\n1411 adding to {genName} with {instantiated}")
             }
-            scope.types.addToGlobalAt (genName) put (instantiated)
+            scope.types.at (genName) put (instantiated)
             instantiated
         }
     }
