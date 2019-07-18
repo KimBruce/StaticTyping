@@ -1281,7 +1281,8 @@ def astVisitor: ast.AstVisitor is public = object {
     // Grab information from gct file
     // Move processImport back into visitImport
     method visitImport (imp: AstNode) → Boolean {
-        if (debug) then {
+        def debug3: Boolean = false
+        if (debug3) then {
             io.error.write "\n1861: visiting import {imp}"
         }
         // headers of sections of gct form keys
@@ -1289,13 +1290,14 @@ def astVisitor: ast.AstVisitor is public = object {
         def gct: Dictionary⟦String, List⟦String⟧⟧ = 
             xmodule.gctDictionaryFor(imp.path)
         def impName : String = imp.nameString
-        if (debug) then {
+        if (debug3) then {
             io.error.write("\n1953 gct is {gct}")
             io.error.write("\n1954 keys are {gct.keys}\n")
         }
 
         //retrieves the names of public methods from imported module
-        def importMethods : Set⟦MethodType⟧ = processGct(gct, impName)
+        processGctTypes(gct, impName)
+        def importMethods : Set⟦MethodType⟧ = processGctMethods(gct, impName)
 
         // Create the ObjectType and MethodType of import
         def impOType: ObjectType = 
@@ -1310,7 +1312,7 @@ def astVisitor: ast.AstVisitor is public = object {
         scope.variables.at(impName) put(impOType)
         scope.methods.at(impName) put(impMType)
         cache.at(imp) put (impOType)
-        if (debug) then {
+        if (debug3) then {
             io.error.write("\n2421: ObjectType of the " ++
                                 "import {impName} is: {impOType}")
         }
@@ -1379,51 +1381,10 @@ def astVisitor: ast.AstVisitor is public = object {
         }
     }
 
-    method processGct(gct: Dictionary⟦String, List⟦String⟧⟧, 
+    method processGctMethods(gct: Dictionary⟦String, List⟦String⟧⟧, 
                             impName: String) → Set⟦MethodType⟧ {
         def importMethods : Set⟦MethodType⟧ = emptySet
-
         def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
-
-        gct.keys.do { key: String -> 
-            if (key.startsWith("typedec-of:")) then {
-                //gets the name of the type
-                def headerName : String = split(key, ":").at(2)
-                def typeName : String = split(headerName, ".").last
-                def prefx : String = headerName.substringFrom(1)
-                            to(headerName.size - typeName.size - 1)
-
-                def tokens = lex.lexLines(gct.at(key))
-                def typeDec: AstNode= parser.typedec(tokens)
-
-                if (prefx == "") then {
-                    typeDec.accept(basicImportVisitor)
-                } else {
-                    typeDec.accept(importVisitor("{impName}.{prefx}"))
-                }
-
-                // If the type name begins with a '$', then it 
-                // is a type that returns an object corresponding 
-                // to a module that was publicly imported by our 
-                // own import. We use this type to construct the
-                // method for accessing the imported module's 
-                // public methods.
-                if (typeName.at(1) == "$") then {
-                    def importName : String = 
-                        typeName.substringFrom (2)
-                    def mixPart : MixPart = 
-                        ot.aMixPartWithName(importName)
-                                        parameters(emptyList⟦Param⟧)
-
-                    importMethods.add (
-                        aMethodType.signature (list[mixPart]) returnType 
-                            (anObjectType.fromDType(typeDec.value)with(emptyList)))
-                } else {
-                    updateTypeScope(typeDec)
-                }
-            }
-        }
-
         gct.keys.do { key : String →
             // Example key: 
             // publicMethod:d:
@@ -1437,6 +1398,30 @@ def astVisitor: ast.AstVisitor is public = object {
             }
         }
         importMethods
+    }
+
+    method processGctTypes(gct: Dictionary⟦String, List⟦String⟧⟧, 
+                            impName: String) → Done {
+        def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
+        gct.at("types").do { aType ->
+            def key: String = "typedec-of:{aType}"
+            //gets the name of the type
+            def headerName : String = split(key, ":").at(2)
+            def typeName : String = split(headerName, ".").last
+            def prefx : String = headerName.substringFrom(1)
+                        to(headerName.size - typeName.size - 1)
+
+            def tokens = lex.lexLines(gct.at(key))
+            def typeDec: AstNode= parser.typedec(tokens)
+
+            if (prefx == "") then {
+                typeDec.accept(basicImportVisitor)
+            } else {
+                typeDec.accept(importVisitor("{impName}.{prefx}"))
+            }
+
+            updateTypeScope(typeDec)
+        }
     }
 
 
@@ -1494,8 +1479,7 @@ def astVisitor: ast.AstVisitor is public = object {
         }
 
         //retrieves the names of public methods from imported module
-        def dialectMethods : Set⟦MethodType⟧ =
-                                processGct(gct, dialectName)
+        def dialectMethods : Set⟦MethodType⟧ = processGctMethods(gct, dialectName)
 
         for (dialectMethods) do {meth: MethodType ->
             scope.methods.at(meth.nameString) put(meth)
@@ -1778,10 +1762,9 @@ method superTypeWithInherits (inheritedMethods': Set⟦MethodType⟧, publicSupe
     }
     var name: String := inheriting.value.nameString
     if (name.contains "$object(") then {
-    
-        io.error.write 
-            "\n inheriting.value.parts : {inheriting.value.parts}"
-
+        if(debug) then {
+            io.error.write "\n inheriting.value.parts : {inheriting.value.parts}"
+        }
 
         // fix glitch with method name in inheritance clause
         //inheriting.value.parts.removeLast
@@ -1885,10 +1868,8 @@ method publicTypeElse (outerVal, publicSuperType,superType, body) -> ot.PublicTy
         allMethods.add(isMeMeth)
         allMethods.add(outerMeth)
         // collect embedded types in these dictionaries
-        def publicTypes: Dictionary⟦String,ObjectType⟧ =
-                                emptyDictionary
-        def allTypes: Dictionary⟦String,ObjectType⟧ =
-                                emptyDictionary
+        def publicTypes: Set[[ObjectType⟧ = emptySet
+        def allTypes: Set[[ObjectType⟧ = emptySet
 
         // gather types for all methods in object (including 
         // implicit ones for vars and defs)
@@ -1910,7 +1891,7 @@ method publicTypeElse (outerVal, publicSuperType,superType, body) -> ot.PublicTy
             io.error.write "\n1204: Internal type is {internalType}"
         }
 
-        return ot.publicTypeReturnBundle (allMethods, publicMethods,internalType)
+        return ot.publicTypeReturnBundle (allMethods, publicMethods, internalType)
 }
 
 //Gather types for all methods in object (including 
