@@ -1403,6 +1403,8 @@ def astVisitor: ast.AstVisitor is public = object {
     method processGctTypes(gct: Dictionary⟦String, List⟦String⟧⟧, 
                             impName: String) → Done {
         def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
+        def typeDecs: List[[AstNode]] = emptyList
+        
         gct.at("types").do { aType ->
             def key: String = "typedec-of:{aType}"
             //gets the name of the type
@@ -1412,14 +1414,25 @@ def astVisitor: ast.AstVisitor is public = object {
                         to(headerName.size - typeName.size - 1)
 
             def tokens = lex.lexLines(gct.at(key))
-            def typeDec: AstNode= parser.typedec(tokens)
-
+            def typeDec: AstNode = parser.typedec(tokens)
+            
             if (prefx == "") then {
                 typeDec.accept(basicImportVisitor)
             } else {
                 typeDec.accept(importVisitor("{impName}.{prefx}"))
             }
 
+            typeDecs.push(typeDec)
+
+            // Put type placholders into the scope
+            if(false ≠ typeDec.typeParams) then {
+                scope.generics.at(aType) put (ot.aGenericType.placeholder)
+            } else {
+                scope.types.at(aType) put (ot.anObjectType.placeholder)
+            }
+        }
+
+        for(typeDecs) do { typeDec ->
             updateTypeScope(typeDec)
         }
     }
