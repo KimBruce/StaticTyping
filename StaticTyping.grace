@@ -974,8 +974,6 @@ def astVisitor: ast.AstVisitor is public = object {
         // All statements in module
         def bodyNodes: List⟦AstNode⟧ = list(node.value)
 
-        // standardGrace node
-
         //goes through the body of the module and processes imports
         for (bodyNodes) do{ nd : AstNode →
             match (nd)
@@ -1296,12 +1294,10 @@ def astVisitor: ast.AstVisitor is public = object {
         }
 
         //retrieves the names of public methods from imported module
-        processGctTypes(gct, impName)
-        def importMethods : Set⟦MethodType⟧ = processGctMethods(gct, impName)
+        def importMethods : Set⟦MethodType⟧ = processGct(gct, impName)
 
         // Create the ObjectType and MethodType of import
-        def impOType: ObjectType = 
-            anObjectType.fromMethods(importMethods)
+        def impOType: ObjectType = anObjectType.fromMethods(importMethods)
 
         def sig: List⟦MixPart⟧ = list[ot.aMixPartWithName(impName)
                                     parameters (emptyList⟦Param⟧)]
@@ -1381,11 +1377,69 @@ def astVisitor: ast.AstVisitor is public = object {
         }
     }
 
-    method processGctMethods(gct: Dictionary⟦String, List⟦String⟧⟧, 
+    method processGct(gct: Dictionary⟦String, List⟦String⟧⟧, 
                             impName: String) → Set⟦MethodType⟧ {
         def importMethods : Set⟦MethodType⟧ = emptySet
         def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
+        def typeDecs: List[[share.TypeDeclaration]] = emptyList
         gct.keys.do { key : String →
+            if { key.startsWith("typedec-of:") } then {
+                // Example key: 
+                // typedec-of:MyType:
+                //   type MyType = {
+                //     method m -> Number
+                //   }
+
+                // Gets the name of the type
+                def headerName : String = split(key, ":").at(2)
+                def typeName : String = split(headerName, ".").last
+                def prefx : String = headerName.substringFrom(1)
+                            to(headerName.size - typeName.size - 1)
+
+                def tokens = lex.lexLines(gct.at(key))
+                def typeDec: AstNode = parser.typedec(tokens)
+                
+                if(typeName.startsWith("$")) then {
+                    typeDec.value.accept(importVisitor(typeDec.nameString))
+                }
+
+                if (prefx == "") then {
+                    typeDec.accept(basicImportVisitor)
+                } else {
+                    typeDec.accept(importVisitor("{impName}.{prefx}"))
+                }
+
+                // If the type name begins with a '$', then it 
+                // is a type that returns an object corresponding 
+                // to a module that was publicly imported by our 
+                // own import. We use this type to construct the
+                // method for accessing the imported module's 
+                // public methods.
+                if (typeName.at(1) == "$") then {
+                    def importName : String = 
+                        typeName.substringFrom (2)
+                    def mixPart : MixPart = 
+                        ot.aMixPartWithName(importName)
+                                        parameters(emptyList⟦Param⟧)
+
+                    importMethods.add (
+                        aMethodType.signature (list[mixPart]) returnType 
+                            (anObjectType.fromDType(typeDec.value)with(emptyList)))
+                } else {
+                    typeDecs.push(typeDec)
+                    // Put type placholders into the scope
+                    if(false ≠ typeDec.typeParams) then {
+                        scope.generics.at(typeDec.nameString) put (ot.aGenericType.placeholder)
+                    } else {
+                        scope.types.at(typeDec.nameString) put (ot.anObjectType.placeholder)
+                    }
+                }
+            }
+        }
+        for(typeDecs) do { typeDec ->
+            updateTypeScope(typeDec)
+        }
+        gct.keys.do { key: String ->
             // Example key: 
             // publicMethod:d:
             // d → D⟦Number⟧MyType
@@ -1399,44 +1453,6 @@ def astVisitor: ast.AstVisitor is public = object {
         }
         importMethods
     }
-
-    method processGctTypes(gct: Dictionary⟦String, List⟦String⟧⟧, 
-                            impName: String) → Done {
-        def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
-        def typeDecs: List[[AstNode]] = emptyList
-        
-        gct.at("types").do { aType ->
-            def key: String = "typedec-of:{aType}"
-            //gets the name of the type
-            def headerName : String = split(key, ":").at(2)
-            def typeName : String = split(headerName, ".").last
-            def prefx : String = headerName.substringFrom(1)
-                        to(headerName.size - typeName.size - 1)
-
-            def tokens = lex.lexLines(gct.at(key))
-            def typeDec: AstNode = parser.typedec(tokens)
-            
-            if (prefx == "") then {
-                typeDec.accept(basicImportVisitor)
-            } else {
-                typeDec.accept(importVisitor("{impName}.{prefx}"))
-            }
-
-            typeDecs.push(typeDec)
-
-            // Put type placholders into the scope
-            if(false ≠ typeDec.typeParams) then {
-                scope.generics.at(aType) put (ot.aGenericType.placeholder)
-            } else {
-                scope.types.at(aType) put (ot.anObjectType.placeholder)
-            }
-        }
-
-        for(typeDecs) do { typeDec ->
-            updateTypeScope(typeDec)
-        }
-    }
-
 
     // type check expression being returned via return statement
     method visitReturn (node: AstNode) → Boolean {
@@ -1492,7 +1508,7 @@ def astVisitor: ast.AstVisitor is public = object {
         }
 
         //retrieves the names of public methods from imported module
-        def dialectMethods : Set⟦MethodType⟧ = processGctMethods(gct, dialectName)
+        def dialectMethods : Set⟦MethodType⟧ = processGct(gct, dialectName)
 
         for (dialectMethods) do {meth: MethodType ->
             scope.methods.at(meth.nameString) put(meth)
