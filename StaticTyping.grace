@@ -933,16 +933,55 @@ def astVisitor: ast.AstVisitor is public = object {
 
     // Type check an object.  Must get both public and 
     // confidential types
-    method visitObject (obj :AstNode) → Boolean {
+    method visitObject (obj: AstNode) → Boolean {
         def debug3: Boolean = false
         // type check body of the method
         if (debug3) then {
             io.error.write "\n684 Ready to type check {obj}***"
         }
+        visitObjectHelper(obj, false)
+    }
+
+    method visitObjectHelper (obj: AstNode, hasImports: Boolean) → Boolean {
+        def debug3: Boolean = false
         def pcType: PublicConfidential = scope.enter {
-            // Collect types declared in obj into new level of scope
-            collectTypes (list (obj.value))
-            processBody (list (obj.value), obj.superclass)
+            var withoutImport: AstNode
+            if(hasImports) then {
+                def importNodes: List⟦AstNode⟧ = emptyList⟦AstNode⟧
+                // All statements in module
+                def bodyNodes: List⟦AstNode⟧ = list(obj.value)
+
+                // Goes through the body of the module and processes imports
+                for (bodyNodes) do{ nd : AstNode →
+                    match (nd)
+                      case {imp: share.Import →
+                        // Visitimport processes the import and puts its type 
+                        // on the variable scope and method scope
+                        visitImport(imp)
+                        importNodes.add(imp)
+                    } else { } // Ignore non-import nodes
+                }
+
+                // Removes import statements from the body of the module
+                for(importNodes) do{nd : AstNode →
+                    bodyNodes.remove(nd)
+                }
+
+                // Create equivalent module without imports
+                withoutImport := ast.moduleNode.body(bodyNodes)
+                                named (obj.nameString) scope (obj.scope)
+
+                visitObjectHelper(withoutImport, false)
+            }
+
+            if(hasImports) then {
+                // Collect types declared in obj into new level of scope
+                collectTypes (list (withoutImport.value))
+                processBody (list (withoutImport.value), withoutImport.superclass)
+            } else {
+                collectTypes (list (obj.value))
+                processBody (list (obj.value), obj.superclass)     
+            }
         }
         // Record both public and confidential methods 
         // (for inheritance)
@@ -970,32 +1009,9 @@ def astVisitor: ast.AstVisitor is public = object {
         }
         // import statements in module
         visitDialect (node.theDialect)
-        def importNodes: List⟦AstNode⟧ = emptyList⟦AstNode⟧
-        // All statements in module
-        def bodyNodes: List⟦AstNode⟧ = list(node.value)
-
-        //goes through the body of the module and processes imports
-        for (bodyNodes) do{ nd : AstNode →
-            match (nd)
-              case {imp: share.Import →
-                //visitimport processes the import and puts its type 
-                //on the variable scope and method scope
-                visitImport(imp)
-                importNodes.add(imp)
-            } else { }//Ignore non-import nodes
-        }
-
-        //removes import statements from the body of the module
-        for(importNodes) do{nd : AstNode →
-            bodyNodes.remove(nd)
-        }
-
-        // Create equivalent module without imports
-        def withoutImport : AstNode = ast.moduleNode.body(bodyNodes)
-                        named (node.nameString) scope (node.scope)
 
         // type check the remaining object (w/o import statements)
-        visitObject (withoutImport)
+        visitObjectHelper (node, true)
     }
 
     // array literals represent collections (sh'd fix to be lineups)
@@ -1446,6 +1462,7 @@ def astVisitor: ast.AstVisitor is public = object {
             if (key.startsWith("publicMethod:")) then {
                 def tokens = lex.lexLines(gct.at(key))
                 def methodType = parser.methodInInterface(tokens)
+                print("\nmethodType.typeParams: {methodType.typeParams}")
                 methodType.accept(basicImportVisitor)
                 importMethods.add(aMethodType.fromNode(methodType)
                                       with (emptyList[[String]]))
@@ -1486,7 +1503,6 @@ def astVisitor: ast.AstVisitor is public = object {
             io.error.write "\n1919: visiting dialect {node}"
         }
         false
-        //checkMatch (node)
     }
 
     // Grab information from gct file
@@ -1503,8 +1519,8 @@ def astVisitor: ast.AstVisitor is public = object {
             xmodule.gctDictionaryFor(dlct.value)
         def dialectName : String = dlct.nameString
         if (debug2) then {
-            //io.error.write("\n1953 gct is {gct}")
-            //io.error.write("\n1954 keys are {gct.keys}\n")
+            // io.error.write("\n1953 gct is {gct}")
+            // io.error.write("\n1954 keys are {gct.keys}\n")
         }
 
         //retrieves the names of public methods from imported module
@@ -1512,7 +1528,7 @@ def astVisitor: ast.AstVisitor is public = object {
 
         for (dialectMethods) do {meth: MethodType ->
             scope.methods.at(meth.nameString) put(meth)
-            if (debug) then {
+            if (debug2) then {
                io.error.write ("\n2421: Adding from dialect method :"++
                             "{meth.nameString}")
             }
