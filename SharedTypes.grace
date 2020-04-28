@@ -1,4 +1,7 @@
-dialect "standard"
+dialect "none"
+import "standardBundle" as sb
+
+use sb.open
 
 // Error resulting from type checking
 def StaticTypingError: ExceptionKind is public = Exception.refine "StaticTypingError"

@@ -1,5 +1,8 @@
-dialect "standard"
+dialect "none"
 import "SharedTypes" as share
+import "standardBundle" as sb
+
+use sb.open
 
 type MethodType = share.MethodType
 type GenericType = share.GenericType

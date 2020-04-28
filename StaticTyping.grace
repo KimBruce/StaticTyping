@@ -1,11 +1,15 @@
-dialect "standard"
+dialect "none"
 import "ast" as ast
 import "parser" as parser
 import "xmodule" as xmodule
+import "lexer" as lex
 import "io" as io
 import "SharedTypes" as share
 import "ScopeModule" as sc
 import "ObjectTypeModule" as ot
+import "standardBundle" as sb
+
+use sb.open
 
 // Give imported types shorter names
 // Types of AST nodes
@@ -977,6 +981,8 @@ def astVisitor: ast.AstVisitor is public = object {
                 processBody (list (withoutImport.value), withoutImport.superclass)
             } else {
                 collectTypes (list (obj.value))
+                print("\n983: {obj.superclass}")
+                print("\n984: {list (obj.value)}")
                 processBody (list (obj.value), obj.superclass)     
             }
         }
@@ -1401,7 +1407,7 @@ def astVisitor: ast.AstVisitor is public = object {
 
     method processGct(gct: Dictionary⟦String, List⟦String⟧⟧, 
                             impName: String) → Set⟦MethodType⟧ {
-        def importMethods : Set⟦MethodType⟧ = emptySet
+        def importMethods : Set⟦MethodType⟧ = set.empty
         def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
         def typeDecs: List[[share.TypeDeclaration]] = list.empty
         gct.keys.do { key : String →
@@ -1657,7 +1663,7 @@ method processBody (body : List⟦AstNode⟧,
     }
 
     // Process inherited methods
-    var inheritedMethods: Set⟦MethodType⟧ := emptySet
+    var inheritedMethods: Set⟦MethodType⟧ := set.empty
     def hasInherits = false ≠ superclass
 
     //CREATE SUPERTYPE OBJECTTYPE
@@ -1758,7 +1764,7 @@ method superType (superclass: AstNode | false)  -> PublicConfidential is confide
 
     def debug3 = false
     def hasInherits = false ≠ superclass
-    var inheritedMethods: Set⟦MethodType⟧ := emptySet
+    var inheritedMethods: Set⟦MethodType⟧ := set.empty
     var publicSuperType: ObjectType := anObjectType.base
 
     def superType: ObjectType = if(hasInherits) then {
@@ -1937,8 +1943,8 @@ method publicTypeElse (outerVal, publicSuperType,superType, body) -> ot.PublicTy
         allMethods.add(isMeMeth)
         allMethods.add(outerMeth)
         // collect embedded types in these dictionaries
-        def publicTypes: Set[[ObjectType⟧ = emptySet
-        def allTypes: Set[[ObjectType⟧ = emptySet
+        def publicTypes: Set[[ObjectType⟧ = set.empty
+        def allTypes: Set[[ObjectType⟧ = set.empty
 
         // gather types for all methods in object (including 
         // implicit ones for vars and defs)

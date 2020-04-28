@@ -1,8 +1,11 @@
-dialect "standard"
+dialect "none"
 import "ast" as ast
 import "io" as io
 import "ScopeModule" as sc
 import "SharedTypes" as share
+import "standardBundle" as sb
+
+use sb.open
 
 // Rename imported types for convenience
 type MethodType = share.MethodType
