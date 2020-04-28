@@ -1,16 +1,11 @@
-dialect "none"
-import "standardGrace" as sg
+dialect "standard"
 import "ast" as ast
-import "lexer" as lex
 import "parser" as parser
 import "xmodule" as xmodule
 import "io" as io
-import "sys" as sys
 import "SharedTypes" as share
 import "ScopeModule" as sc
 import "ObjectTypeModule" as ot
-
-inherit sg.methods
 
 // Give imported types shorter names
 // Types of AST nodes
@@ -44,7 +39,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = false 
+def debug: Boolean = true 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
@@ -184,7 +179,8 @@ method check (req : share.Request) against(meth' : MethodType)
                     "against {meth}")
                 io.error.write("\n172 aType: {aType}, pType: {pType}")
             }
-
+            print("\n187, aType: {aType}")
+            print("\n188, pType: {pType}")
             // Make sure types of args are subtypes of parameter types
             if (aType.isConsistentSubtypeOf (pType).not) then {
                 StaticTypingError.raise("the expression " ++
@@ -364,7 +360,7 @@ def astVisitor: ast.AstVisitor is public = object {
                     }
                     scope.variables.at(param.value)
                         put (anObjectType.fromDType (param.dtype)
-                                                with (emptyList))
+                                                with (list.empty))
                 }
             }
 
@@ -388,7 +384,7 @@ def astVisitor: ast.AstVisitor is public = object {
                                     ofType (anObjectType.number))
             } else {
                 def newType: ObjectType = 
-                    anObjectType.fromDType (param.dtype) with (emptyList)
+                    anObjectType.fromDType (param.dtype) with (list.empty)
                 if (debug) then {
                     io.error.write "\n355: newType is {newType}"
                 }
@@ -419,9 +415,9 @@ def astVisitor: ast.AstVisitor is public = object {
 
         // Keep track of parameter types and return types in case
         def paramTypesList: List⟦ObjectType⟧ = 
-                                    emptyList⟦ObjectType⟧
+                                    list[[ObjectType]].empty
         def returnTypesList: List⟦ObjectType⟧ = 
-                                    emptyList⟦ObjectType⟧
+                                    list[[ObjectType]].empty
 
         //goes through each case and accumulates its parameter and 
         //return types
@@ -446,7 +442,7 @@ def astVisitor: ast.AstVisitor is public = object {
                     && {"num" ≠ blockParam.dtype.kind}) then {
                 def typeOfParam = 
                     anObjectType.fromDType (blockParam.dtype) 
-                                                with (emptyList)
+                                                with (list.empty)
 
                 if (paramTypesList.contains(typeOfParam).not) then {
                     paramTypesList.add(typeOfParam)
@@ -633,7 +629,7 @@ def astVisitor: ast.AstVisitor is public = object {
 
         var mType: MethodType
         var returnType: ObjectType
-        var typeParams: List⟦String⟧ := emptyList⟦String⟧
+        var typeParams: List⟦String⟧ := list[[String]].empty
 
         if (false != meth.typeParams) then {
             if (debug3) then {
@@ -712,8 +708,9 @@ def astVisitor: ast.AstVisitor is public = object {
             def lastType = typeOf(lastNode)
 
             if (debug) then {
-               io.error.write 
-                  "\n607st: type of lastNode is {lastType}"
+               io.error.write "\n607st: type of lastNode is {lastType}"
+               io.error.write "\n608st: returnType = {returnType}"
+               io.error.write "\n609st: lastType.methods = {lastType.methods}, returnType.methods = {returnType.methods}"
             }
             if(lastType.isConsistentSubtypeOf 
                                     (returnType).not) then {
@@ -809,8 +806,8 @@ def astVisitor: ast.AstVisitor is public = object {
     method visitCall (req: AstNode) → Boolean {
         // Receiver of request
         def rec: AstNode = req.receiver
-        def debug3 = false
-
+        def debug3 = true 
+        print("HELLO")
         if (debug3) then {
             io.error.write ("\n1673: visitCall's call is: "++
                 "{rec.toGrace(0)}.{req.nameString}"++
@@ -947,7 +944,7 @@ def astVisitor: ast.AstVisitor is public = object {
         def pcType: PublicConfidential = scope.enter {
             var withoutImport: AstNode
             if(hasImports) then {
-                def importNodes: List⟦AstNode⟧ = emptyList⟦AstNode⟧
+                def importNodes: List⟦AstNode⟧ = list[[AstNode]].empty
                 // All statements in module
                 def bodyNodes: List⟦AstNode⟧ = list(obj.value)
 
@@ -1098,7 +1095,7 @@ def astVisitor: ast.AstVisitor is public = object {
         } else {
             //get the type of the right-hand side of the equals sign
             def vType : ObjectType = 
-                anObjectType.fromDType (node.value) with (emptyList)
+                anObjectType.fromDType (node.value) with (list.empty)
             if (debug3) then {
                io.error.write "\n875 type is {vType}"
                io.error.write "\n876 methList is {vType.methList}"
@@ -1148,7 +1145,7 @@ def astVisitor: ast.AstVisitor is public = object {
 
     method visitTypeLiteral(node: share.TypeLiteral) → Boolean {
         cache.at (node) put
-            (anObjectType.fromDType (node) with (emptyList))
+            (anObjectType.fromDType (node) with (list.empty))
         false
     }
 
@@ -1210,7 +1207,10 @@ def astVisitor: ast.AstVisitor is public = object {
             def value: AstNode = bind.value
             // value type
             def vType: ObjectType = typeOf(value)
-
+            print("\n1213: scope.types = {scope.types}")
+            print("\n1214: scope.generics = {scope.generics}")
+            print("\n1215: vType.methods: {vType.methods}")
+            print("\n1215: dType.methods: {dType.methods}")
             // make sure value consistent with destination
             if(vType.isConsistentSubtypeOf(dType).not) then {
                 StaticTypingError.raise("the expression " ++
@@ -1241,7 +1241,7 @@ def astVisitor: ast.AstVisitor is public = object {
         }
         // Declared type of feature
         var defType: ObjectType := 
-            anObjectType.fromDType (defd.dtype) with (emptyList)
+            anObjectType.fromDType (defd.dtype) with (list.empty)
         if (debug2) then {
             io.error.write "\n1170: defType for {name} is {defType}"
         }
@@ -1295,7 +1295,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Grab information from gct file
     // Move processImport back into visitImport
     method visitImport (imp: AstNode) → Boolean {
-        def debug3: Boolean = false
+        def debug3: Boolean = true 
         if (debug3) then {
             io.error.write "\n1861: visiting import {imp}"
         }
@@ -1303,6 +1303,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // Associated values are lines beneath the header
         def gct: Dictionary⟦String, List⟦String⟧⟧ = 
             xmodule.gctDictionaryFor(imp.path)
+        print("\n1306:" ++ imp.path)
         def impName : String = imp.nameString
         if (debug3) then {
             io.error.write("\n1953 gct is {gct}")
@@ -1316,7 +1317,7 @@ def astVisitor: ast.AstVisitor is public = object {
         def impOType: ObjectType = anObjectType.fromMethods(importMethods)
 
         def sig: List⟦MixPart⟧ = list[ot.aMixPartWithName(impName)
-                                    parameters (emptyList⟦Param⟧)]
+                                    parameters (list[[Param]].empty)]
         def impMType: MethodType = aMethodType.signature(sig)
                                             returnType (impOType)
 
@@ -1359,7 +1360,9 @@ def astVisitor: ast.AstVisitor is public = object {
         }
 
         method visitMethodType(methType:ast.AstNode) → Boolean {
+            print("\n1363: methType before prepending typeparams: {methType.toGrace(0) }") 
             prependToTypeParam(methType)
+            print("\n1365: methType before prepending typeparams: {methType.toGrace(0)}") 
             true
         }
 
@@ -1368,6 +1371,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // Also make sure we are prepending impName to type annotations and not
         // parameter names(stored as identifierBindings).
         method visitIdentifier(ident:ast.AstNode) → Boolean {
+            print ("\n1390: ident = {ident}") 
             // identifierresolution can also prepend 'self' and 'module()Object' to
             // calls. These are not needed for type-checking so we ignore them
             if ((ident.name == "self") || {ident.name == "module()Object"}) then {
@@ -1377,6 +1381,8 @@ def astVisitor: ast.AstVisitor is public = object {
                     ident.name := "{impName}.{ident.name}"
                 }
             }
+
+            print ("\n1390: ident = {ident}") 
             true
         }
 
@@ -1397,7 +1403,7 @@ def astVisitor: ast.AstVisitor is public = object {
                             impName: String) → Set⟦MethodType⟧ {
         def importMethods : Set⟦MethodType⟧ = emptySet
         def basicImportVisitor : ast.AstVisitor = importVisitor(impName)
-        def typeDecs: List[[share.TypeDeclaration]] = emptyList
+        def typeDecs: List[[share.TypeDeclaration]] = list.empty
         gct.keys.do { key : String →
             if { key.startsWith("typedec-of:") } then {
                 // Example key: 
@@ -1412,9 +1418,9 @@ def astVisitor: ast.AstVisitor is public = object {
                 def prefx : String = headerName.substringFrom(1)
                             to(headerName.size - typeName.size - 1)
 
-                def tokens = lex.lexLines(gct.at(key))
+                def tokens = lex.lexLines(gct.at(key)) 
                 def typeDec: AstNode = parser.typedec(tokens)
-                
+                print("\n1418: typedec is: " ++ typeDec.asString)       
                 if(typeName.startsWith("$")) then {
                     typeDec.value.accept(importVisitor(typeDec.nameString))
                 }
@@ -1424,7 +1430,35 @@ def astVisitor: ast.AstVisitor is public = object {
                 } else {
                     typeDec.accept(importVisitor("{impName}.{prefx}"))
                 }
-
+                
+                if (typeName.at(1) != "$") then {
+                    typeDecs.push(typeDec)
+                    // Put type placholders into the scope
+                    if(false ≠ typeDec.typeParams) then {
+                        scope.generics.at(typeDec.nameString) put (ot.aGenericType.placeholder)
+                        print("\n1450, putting " ++ typeDec.nameString ++ " in generic scope")
+                    } else {
+                        scope.types.at(typeDec.nameString) put (ot.anObjectType.placeholder)
+                        print("\n1452, putting " ++ typeDec.nameString ++ " in types scope")
+                    }
+                }
+            }
+        }
+        print("\n1458, typeDecs: " ++ typeDecs)
+        for(typeDecs) do { typeDec ->
+            updateTypeScope(typeDec)
+        }
+        gct.keys.do { key: String ->
+            if { key.startsWith("typedec-of:") } then {
+                // Gets the name of the type
+                def headerName : String = split(key, ":").at(2)
+                def typeName : String = split(headerName, ".").last
+                def prefx : String = headerName.substringFrom(1)
+                            to(headerName.size - typeName.size - 1)
+                
+                def tokens = lex.lexLines(gct.at(key)) 
+                def typeDec: AstNode = parser.typedec(tokens)
+                
                 // If the type name begins with a '$', then it 
                 // is a type that returns an object corresponding 
                 // to a module that was publicly imported by our 
@@ -1436,24 +1470,13 @@ def astVisitor: ast.AstVisitor is public = object {
                         typeName.substringFrom (2)
                     def mixPart : MixPart = 
                         ot.aMixPartWithName(importName)
-                                        parameters(emptyList⟦Param⟧)
-
+                                        parameters(list[[Param]].empty)
+                    def typeParams : List⟦String⟧ = ot.getTypeParams(typeDec.typeParams.params)
                     importMethods.add (
                         aMethodType.signature (list[mixPart]) returnType 
-                            (anObjectType.fromDType(typeDec.value)with(emptyList)))
-                } else {
-                    typeDecs.push(typeDec)
-                    // Put type placholders into the scope
-                    if(false ≠ typeDec.typeParams) then {
-                        scope.generics.at(typeDec.nameString) put (ot.aGenericType.placeholder)
-                    } else {
-                        scope.types.at(typeDec.nameString) put (ot.anObjectType.placeholder)
-                    }
+                            (anObjectType.fromDType(typeDec.value)with(typeParams)))
                 }
             }
-        }
-        for(typeDecs) do { typeDec ->
-            updateTypeScope(typeDec)
         }
         gct.keys.do { key: String ->
             // Example key: 
@@ -1464,8 +1487,9 @@ def astVisitor: ast.AstVisitor is public = object {
                 def methodType = parser.methodInInterface(tokens)
                 print("\nmethodType.typeParams: {methodType.typeParams}")
                 methodType.accept(basicImportVisitor)
+                def typeParams : List⟦String⟧ = ot.getTypeParams(methodType.typeParams.params)
                 importMethods.add(aMethodType.fromNode(methodType)
-                                      with (emptyList[[String]]))
+                                      with (typeParams))
             }
         }
         importMethods
@@ -1583,7 +1607,7 @@ method updateTypeScope(typeDec : share.TypeDeclaration) → Done
                                             is confidential {
     //check whether the typeDec is a GenericType and 
     // process accordingly
-    def debug3 = false
+    def debug3 = true 
     var oType : ObjectType
     if(false ≠ typeDec.typeParams) then {
         if (debug) then {
@@ -1602,7 +1626,7 @@ method updateTypeScope(typeDec : share.TypeDeclaration) → Done
         }
         // DEBUG: Was definedByNode
         def typeName: String = typeDec.nameString
-        oType := anObjectType.fromDType (typeDec.value) with (emptyList[[String]])
+        oType := anObjectType.fromDType (typeDec.value) with (list[[String]].empty)
         scope.types.at(typeName) put(oType)
         if (debug3) then {
             io.error.write "\n1252: added to types: {oType}"
@@ -1616,7 +1640,7 @@ method updateMethScope(meth : AstNode) → MethodType is confidential {
         def typeParams = ot.getTypeParams(meth.typeParams.params)
         mType := aMethodType.fromNode(meth) with (typeParams)  
     } else {
-        mType := aMethodType.fromNode(meth) with (emptyList[[String]])  
+        mType := aMethodType.fromNode(meth) with (list[[String]].empty)  
     }
     scope.methods.at(mType.nameString) put (mType)
     mType
@@ -1687,7 +1711,7 @@ method addAliasMethods (superclass: AstNode | false,
          inheritedMethods : Set⟦MethodType⟧) -> List⟦MethodType⟧ is confidential{
 
     def debug3 = false
-    def aliasMethods: List⟦MethodType⟧ = emptyList
+    def aliasMethods: List⟦MethodType⟧ = list.empty
     for (superclass.aliases) do {aliasPair →
         for (inheritedMethods) do {im →
             if (debug3) then {
@@ -1761,9 +1785,9 @@ method throwAwayExcludedMethods (superclass: AstNode | false,
     var inheritedMethods := inheritedMethods'
     var pubInheritedMethods := pubInheritedMethods'
     var droppedMethods: List[[MethodType]] := 
-                                emptyList[[MethodType]]
+                                list[[MethodType]].empty
     var pubDroppedMethods: List[[MethodType]] := 
-                                emptyList[[MethodType]]
+                                list[[MethodType]].empty
     // Throw away methods being excluded
     for (superclass.exclusions) do {ex →
         // First throw away from list of all inherited methods
@@ -2034,7 +2058,7 @@ method defCase (defd, allMethods', publicMethods') -> ot.SetMethodTypePair is co
     var publicMethods := publicMethods'
 
     def mType: MethodType = aMethodType.fromNode(defd)
-                                         with (emptyList[[String]])
+                                         with (list[[String]].empty)
     if (allMethods.contains(mType)) then {
         StaticTypingError.raise ("A var or def {mType} "
             ++ "on line {defd.line} may not override "++
@@ -2070,7 +2094,7 @@ method addSetterMethodFor(defd: share.Var | share.Def,
         def name': String = defd.nameString ++ ":=" 
         // (1)"  ?? is name right?
         def dType: ObjectType = 
-            anObjectType.fromDType (defd.dtype) with (emptyList)
+            anObjectType.fromDType (defd.dtype) with (list.empty)
         def param: Param = 
                 aParam.withName(defd.nameString) ofType (dType)
         def sig: List⟦MixPart⟧ =
@@ -2156,7 +2180,7 @@ def TypeDeclarationError = TypeError.refine "TypeDeclarationError"
 method collectTypes(nodes : Collection⟦AstNode⟧) → Done 
                                     is confidential {
     def debug3 = false
-    def typeDecs: List[[share.TypeDeclaration]] = emptyList[[share.TypeDeclaration]]
+    def typeDecs: List[[share.TypeDeclaration]] = list[[share.TypeDeclaration]].empty
 
     if (debug3) then {
         io.error.write ("\n818st Types scope before "++
@@ -2198,7 +2222,9 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
 
     // Update type placeholders in the scope to real types 
     for(typeDecs) do { typeDec →
-        updateTypeScope(typeDec)
+        if(false ≠ typeDec.typeParams) then {
+            updateTypeScope(typeDec)
+        }
     }
 
     if (debug3) then {

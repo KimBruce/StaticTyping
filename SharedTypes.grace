@@ -1,18 +1,11 @@
-dialect "none"
-import "standardGrace" as sg
-
-import "ast" as ast
-import "xmodule" as xmodule
-import "io" as io
-
-inherit sg.methods
+dialect "standard"
 
 // Error resulting from type checking
 def StaticTypingError: ExceptionKind is public = Exception.refine "StaticTypingError"
 
 // Returned when searching for a method that is not there.
-def noSuchMethod: outer.Pattern = object {
-    use BasicPattern
+def noSuchMethod: Pattern = object {
+    use BasePattern
 
     method matches(obj : Object) -> Boolean {
         if(self.isMe(obj)) then {
@@ -307,17 +300,9 @@ type ObjectTypeFactory = {
     doneType → ObjectType
 
     // other built-in types from prelude
-    pattern → ObjectType
-    iterator → ObjectType
     boolean → ObjectType
     number → ObjectType
     string → ObjectType
-    listTp → ObjectType
-    set → ObjectType
-    sequence → ObjectType
-    dictionary → ObjectType
-    point → ObjectType
-    binding → ObjectType
 }
 
 // AST node type, kind tells what kind of node it is,
@@ -326,7 +311,7 @@ type AstNode = { kind → String }
 
 // Create a pattern for matching kind for match
 class aPatternMatchingNode (kind : String) → Pattern {
-    use BasicPattern
+    use BasePattern
 
     method matches (obj : Object) → Boolean {
         match (obj)
@@ -348,7 +333,7 @@ class aPatternMatchingNode (kind : String) → Pattern {
 // A pattern that matches if parameter satisfies predicate
 // Use in matches
 class booleanPattern (predicate: Function1⟦AstNode⟧) → Pattern {
-    use BasicPattern
+    use BasePattern
     
     method matches (obj: AstNode) → Boolean {
         if (predicate.apply (obj)) then {
@@ -398,7 +383,4 @@ def Module: Pattern is public = aPatternMatchingNode "module"
 // inside StaticTyping.grace and ObjectTypeModule.grace.
 //
 // Please update this set when new prelude types are added.
-def preludeTypes: Set⟦String⟧ is public = emptySet⟦String⟧
-preludeTypes.addAll( ["Done", "Pattern", "Iterator", "Boolean", "Number",
-                      "String", "List", "Set", "Sequence", "Dictionary","Point",
-                      "Binding", "Collection", "Enumerable", "Range", "Object"])
+def preludeTypes: Set⟦String⟧ is public = set[[String]].empty.addAll(["Done", "Boolean", "Number", "String", "Object"])

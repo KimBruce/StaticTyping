@@ -1,21 +1,14 @@
-dialect "none"
-import "standardGrace" as sg
-
-import "ast" as ast
-import "xmodule" as xmodule
-import "io" as io
+dialect "standard"
 import "SharedTypes" as share
-
-inherit sg.methods
 
 type MethodType = share.MethodType
 type GenericType = share.GenericType
 type ObjectType = share.ObjectType
 
 // The cached public type assignments.
-def cache: Dictionary is readable = emptyDictionary
+def cache: Dictionary is readable = dictionary.empty
 // cache holding confidential types for inheritance
-def allCache: Dictionary is readable = emptyDictionary
+def allCache: Dictionary is readable = dictionary.empty
 
 // Holds dictionaries for names in scope
 // Will be used for defs/vars, methods, and types
@@ -44,7 +37,7 @@ type StackOfKind⟦V⟧ = {
 class stackOfKind⟦V⟧(kind : String) → StackOfKind⟦V⟧{
 
     // represented as stack of dictionaries
-    def stack: List⟦Dictionary⟧ is public = list[emptyDictionary]
+    def stack: List⟦Dictionary⟧ is public = list[dictionary.empty]
 
     // add <name,value> to most recent level of the scope
     method at (name : String) put (value:V) → Done {
@@ -173,9 +166,9 @@ def scope: Scope is public = object {
     // returns value of bl
     method enter⟦V⟧ (bl:Function0⟦V⟧) → V {
         // create new empty environment
-        variables.stack.push (emptyDictionary)
-        methods.stack.push (emptyDictionary)
-        types.stack.push (emptyDictionary)
+        variables.stack.push (dictionary.empty)
+        methods.stack.push (dictionary.empty)
+        types.stack.push (dictionary.empty)
 
         // execute bl in the new environment
         def result: V = bl.apply
