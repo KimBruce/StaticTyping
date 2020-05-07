@@ -5,6 +5,18 @@ MINIGRACE = ../gracelang/minigrace
 %.js: %.grace
 	mgc $<
 
+SharedTypes.js: SharedTypes.grace
+	mgc SharedTypes.grace
+
+ScopeModule.js: SharedTypes.js ScopeModule.grace
+	mgc ScopeModule.grace
+
+ObjectTypeModule.js: SharedTypes.js ScopeModule.js ObjectTypeModule.grace
+	mgc ObjectTypeModule.grace
+
+StaticTyping.js: SharedTypes.js ScopeModule.js ObjectTypeModule.js StaticTyping.grace
+	mgc StaticTyping.grace
+
 compile: $(patsubst %, %.js, SharedTypes ScopeModule ObjectTypeModule StaticTyping)
 
 test:
