@@ -29,10 +29,9 @@ def input : String =
 util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
-def inputTree = ir.resolve(module)
 
 testSuiteNamed "self-referential subtype test" with {
     test "self-referential not a subtype" by {
-        assert({inputTree.accept(st.astVisitor)}) shouldRaise (sh.StaticTypingError)
+        assert({module.accept(st.astVisitor)}) shouldRaise (sh.StaticTypingError)
     }
 }

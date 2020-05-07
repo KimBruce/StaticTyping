@@ -2,7 +2,7 @@ dialect "StaticTyping"
 
 var s: String := "a"
 
-type Object = {}
+type NewObject = {}
 
 type A = {
     new(arg:String) → Object

@@ -6,9 +6,8 @@ import "util" as util
 import "io" as io
 import "SharedTypes" as sh
 import "ObjectTypeModule" as ot
-import "identifierresolution" as ir
 
-//Declare types such that types C and D are subtypes of type A
+// Declare types such that types C and D are subtypes of type A
 def input : String =
     "type A = \{one -> Boolean\}\n" ++
     "type B = \{two -> Number\}\n" ++
@@ -22,32 +21,30 @@ def input : String =
     "\}\n" ++
     ""
 
-//Turns input into an abstract syntax tree (ast)
+// Turns input into an abstract syntax tree (ast)
 util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
-def inputTree = ir.resolve(module)
 
-//Returns a list of AstNodes corresponding to each type
-def nodes  = inputTree.value
+// Returns a list of AstNodes corresponding to each type
+def nodes  = module.value
 
-//Turns type nodes into ObjectTypes so the type checker can process them
+// Turns type nodes into ObjectTypes so the type checker can process them
 def typeA : ast.AstNode = nodes.at(1)
 def typeB : ast.AstNode = nodes.at(2)
 def typeC : ast.AstNode = nodes.at(3)
 def typeD : ast.AstNode = nodes.at(4)
 
-def objTypeA : sh.ObjectType = ot.anObjectType.fromDType(typeA.value) with (emptyList)
-def objTypeB : sh.ObjectType = ot.anObjectType.fromDType(typeB.value) with (emptyList)
-def objTypeC : sh.ObjectType = ot.anObjectType.fromDType(typeC.value) with (emptyList)
-def objTypeD : sh.ObjectType = ot.anObjectType.fromDType(typeD.value) with (emptyList)
+def objTypeA : sh.ObjectType = ot.anObjectType.fromDType(typeA.value) with (list.empty)
+def objTypeB : sh.ObjectType = ot.anObjectType.fromDType(typeB.value) with (list.empty)
+def objTypeC : sh.ObjectType = ot.anObjectType.fromDType(typeC.value) with (list.empty)
+def objTypeD : sh.ObjectType = ot.anObjectType.fromDType(typeD.value) with (list.empty)
 
 //  *****************************
 //  **   start of test suite   **
 //  *****************************
 
 testSuiteNamed "isSubtypeOf variant tests" with {
-
     test "non-variant self, variant other" by {
       def objTypeAorB : sh.ObjectType = objTypeA | objTypeB
       def objTypeBorC : sh.ObjectType = objTypeB | objTypeC

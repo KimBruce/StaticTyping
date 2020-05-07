@@ -95,10 +95,9 @@ def input : String =
 util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
-def inputTree = ir.resolve(module)
 
 //Returns a list of AstNodes corresponding to each testBlock
-def nodes  = inputTree.value
+def nodes  = module.value
 
 testSuiteNamed "visitMatchCase tests" with {
 
@@ -114,7 +113,7 @@ testSuiteNamed "visitMatchCase tests" with {
     def blk1Specific = blk1.value.value.at(2)
 
     //checks that the type of the var result is String
-    assert(ot.anObjectType.fromDType(blk1Specific.dtype) with (emptyList))
+    assert(ot.anObjectType.fromDType(blk1Specific.dtype) with (list.empty))
         shouldBe (ot.anObjectType.string)
   }
 

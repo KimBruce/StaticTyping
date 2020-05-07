@@ -8,7 +8,7 @@ import "SharedTypes" as sh
 import "ObjectTypeModule" as ot
 import "identifierresolution" as ir
 
-//Declare types such that types C and D are subtypes of type A
+// Declare types such that types C and D are subtypes of type A
 def input : String =
     "type A = \{a -> Boolean\}\n" ++
     "type B = \{b -> Boolean\}\n" ++
@@ -20,31 +20,33 @@ def input : String =
     "type AC = \{\n" ++
     "   a -> Boolean\n" ++
     "   c -> Boolean\}\n" ++
+    "type Num = Number" ++
     ""
 
-//Turns input into an abstract syntax tree (ast)
+// Turns input into an abstract syntax tree (ast)
 util.lines.addAll(input)
 def tokens = lexer.lexString(input)
 def module = parser.parse(tokens)
-def inputTree = ir.resolve(module)
 
-//Returns a list of AstNodes corresponding to each type
-def nodes  = inputTree.value
+// Returns a list of AstNodes corresponding to each type
+def nodes  = module.value
 
-//Turns type nodes into ObjectTypes so the type checker can process them
+// Turns type nodes into ObjectTypes so the type checker can process them
 def typeNodeA : ast.AstNode = nodes.at(1)
 def typeNodeB : ast.AstNode = nodes.at(2)
 def typeNodeC : ast.AstNode = nodes.at(3)
 def typeNodeD : ast.AstNode = nodes.at(4)
-def typeNodeAB: ast.AstNode = nodes.at(5)
-def typeNodeAC: ast.AstNode = nodes.at(6)
+def typeNodeAB : ast.AstNode = nodes.at(5)
+def typeNodeAC : ast.AstNode = nodes.at(6)
+def typeNumber : ast.AstNode = nodes.at(7)
 
-def A : sh.ObjectType = ot.anObjectType.fromDType(typeNodeA.value) with (emptyList)
-def B : sh.ObjectType = ot.anObjectType.fromDType(typeNodeB.value) with (emptyList)
-def C : sh.ObjectType = ot.anObjectType.fromDType(typeNodeC.value) with (emptyList)
-def D : sh.ObjectType = ot.anObjectType.fromDType(typeNodeD.value) with (emptyList)
-def AB: sh.ObjectType = ot.anObjectType.fromDType(typeNodeAB.value) with (emptyList)
-def AC: sh.ObjectType = ot.anObjectType.fromDType(typeNodeAC.value) with (emptyList)
+def A : sh.ObjectType = ot.anObjectType.fromDType(typeNodeA.value) with (list.empty)
+def B : sh.ObjectType = ot.anObjectType.fromDType(typeNodeB.value) with (list.empty)
+def C : sh.ObjectType = ot.anObjectType.fromDType(typeNodeC.value) with (list.empty)
+def D : sh.ObjectType = ot.anObjectType.fromDType(typeNodeD.value) with (list.empty)
+def AB : sh.ObjectType = ot.anObjectType.fromDType(typeNodeAB.value) with (list.empty)
+def AC : sh.ObjectType = ot.anObjectType.fromDType(typeNodeAC.value) with (list.empty)
+def Num : sh.ObjectType = ot.anObjectType.fromDType(typeNumber.value) with (list.empty)
 
 //  *****************************
 //  **   start of test suite   **
@@ -56,18 +58,15 @@ testSuiteNamed "ampersand with variant types" with {
         assert({A & A}) shouldntRaise (Exception)
     }
 
-    // TODO Does not work
+    // TODO Not sure how this test is supposed to work
     // test "self & literal" by {
-    //     print({A & 5}.asString)
-    //     // print(A.isDynamic)
-    //     // print(5.isDynamic)
-    //     //type-checker fails to find method 'isDynamic' inside 5
-    //     assert({A & 5}) shouldRaise (NoSuchMethod)
+         // type-checker fails to find method 'isDynamic' inside 5
+         // assert({A & 5}) shouldRaise (NoSuchMethod)
     // }
 
     test "&-operator on simple types" by {
         //'==' currently not working
-        //assert((A & B) == (AB))
+        assert((A & B) == (AB))
 
         assert((A & B).isSubtypeOf(AB))
 

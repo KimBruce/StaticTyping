@@ -8,6 +8,7 @@ import "SharedTypes" as share
 import "ScopeModule" as sc
 import "ObjectTypeModule" as ot
 import "standardBundle" as sb
+import "option" as option
 
 use sb.open
 
@@ -43,7 +44,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = true 
+def debug: Boolean = false 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
@@ -183,8 +184,6 @@ method check (req : share.Request) against(meth' : MethodType)
                     "against {meth}")
                 io.error.write("\n172 aType: {aType}, pType: {pType}")
             }
-            print("\n187, aType: {aType}")
-            print("\n188, pType: {pType}")
             // Make sure types of args are subtypes of parameter types
             if (aType.isConsistentSubtypeOf (pType).not) then {
                 StaticTypingError.raise("the expression " ++
@@ -810,8 +809,7 @@ def astVisitor: ast.AstVisitor is public = object {
     method visitCall (req: AstNode) → Boolean {
         // Receiver of request
         def rec: AstNode = req.receiver
-        def debug3 = true 
-        print("HELLO")
+        def debug3 = false 
         if (debug3) then {
             io.error.write ("\n1673: visitCall's call is: "++
                 "{rec.toGrace(0)}.{req.nameString}"++
@@ -909,10 +907,8 @@ def astVisitor: ast.AstVisitor is public = object {
        match(rType.getMethod(name))
          case { (ot.noSuchMethod) →
              if (debug) then {
-                io.error.write "\n2001: got to case noSuchMethod "++
-                    "while looking for {name}"
-                io.error.write 
-                    "\n2002: method scope here is {scope.methods}"
+                io.error.write "\n2001: got to case noSuchMethod while looking for {name}"
+                io.error.write "\n2002: method scope here is {scope.methods}"
              }
              StaticTypingError.raise(
                  "no such method or type '{req.nameString}' in " ++
@@ -978,12 +974,10 @@ def astVisitor: ast.AstVisitor is public = object {
             if(hasImports) then {
                 // Collect types declared in obj into new level of scope
                 collectTypes (list (withoutImport.value))
-                processBody (list (withoutImport.value), withoutImport.superclass)
+                processBody (list (withoutImport.value), superclassOption(withoutImport))
             } else {
                 collectTypes (list (obj.value))
-                print("\n983: {obj.superclass}")
-                print("\n984: {list (obj.value)}")
-                processBody (list (obj.value), obj.superclass)     
+                processBody (list (obj.value), superclassOption(obj))     
             }
         }
         // Record both public and confidential methods 
@@ -1003,17 +997,17 @@ def astVisitor: ast.AstVisitor is public = object {
         false
     }
 
-    //Process dialects and import statements
-    //TODO: handle dialects
+    // Process dialects and import statements
+    // TODO: handle dialects
     method visitModule (node: AstNode) → Boolean {  // added kim
         def debug3: Boolean = false
         if (debug3) then {
            io.error.write "\n1698: visiting module {node}"
         }
-        // import statements in module
+        // Type check dialect
         visitDialect (node.theDialect)
 
-        // type check the remaining object (w/o import statements)
+        // Type check the remaining object (w/o import statements)
         visitObjectHelper (node, true)
     }
 
@@ -1213,10 +1207,6 @@ def astVisitor: ast.AstVisitor is public = object {
             def value: AstNode = bind.value
             // value type
             def vType: ObjectType = typeOf(value)
-            print("\n1213: scope.types = {scope.types}")
-            print("\n1214: scope.generics = {scope.generics}")
-            print("\n1215: vType.methods: {vType.methods}")
-            print("\n1215: dType.methods: {dType.methods}")
             // make sure value consistent with destination
             if(vType.isConsistentSubtypeOf(dType).not) then {
                 StaticTypingError.raise("the expression " ++
@@ -1301,7 +1291,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Grab information from gct file
     // Move processImport back into visitImport
     method visitImport (imp: AstNode) → Boolean {
-        def debug3: Boolean = true 
+        def debug3: Boolean = false 
         if (debug3) then {
             io.error.write "\n1861: visiting import {imp}"
         }
@@ -1309,7 +1299,6 @@ def astVisitor: ast.AstVisitor is public = object {
         // Associated values are lines beneath the header
         def gct: Dictionary⟦String, List⟦String⟧⟧ = 
             xmodule.gctDictionaryFor(imp.path)
-        print("\n1306:" ++ imp.path)
         def impName : String = imp.nameString
         if (debug3) then {
             io.error.write("\n1953 gct is {gct}")
@@ -1366,9 +1355,7 @@ def astVisitor: ast.AstVisitor is public = object {
         }
 
         method visitMethodType(methType:ast.AstNode) → Boolean {
-            print("\n1363: methType before prepending typeparams: {methType.toGrace(0) }") 
             prependToTypeParam(methType)
-            print("\n1365: methType before prepending typeparams: {methType.toGrace(0)}") 
             true
         }
 
@@ -1377,7 +1364,6 @@ def astVisitor: ast.AstVisitor is public = object {
         // Also make sure we are prepending impName to type annotations and not
         // parameter names(stored as identifierBindings).
         method visitIdentifier(ident:ast.AstNode) → Boolean {
-            print ("\n1390: ident = {ident}") 
             // identifierresolution can also prepend 'self' and 'module()Object' to
             // calls. These are not needed for type-checking so we ignore them
             if ((ident.name == "self") || {ident.name == "module()Object"}) then {
@@ -1387,8 +1373,6 @@ def astVisitor: ast.AstVisitor is public = object {
                     ident.name := "{impName}.{ident.name}"
                 }
             }
-
-            print ("\n1390: ident = {ident}") 
             true
         }
 
@@ -1425,8 +1409,7 @@ def astVisitor: ast.AstVisitor is public = object {
                             to(headerName.size - typeName.size - 1)
 
                 def tokens = lex.lexLines(gct.at(key)) 
-                def typeDec: AstNode = parser.typedec(tokens)
-                print("\n1418: typedec is: " ++ typeDec.asString)       
+                def typeDec: AstNode = parser.typedec(tokens)     
                 if(typeName.startsWith("$")) then {
                     typeDec.value.accept(importVisitor(typeDec.nameString))
                 }
@@ -1442,15 +1425,12 @@ def astVisitor: ast.AstVisitor is public = object {
                     // Put type placholders into the scope
                     if(false ≠ typeDec.typeParams) then {
                         scope.generics.at(typeDec.nameString) put (ot.aGenericType.placeholder)
-                        print("\n1450, putting " ++ typeDec.nameString ++ " in generic scope")
                     } else {
                         scope.types.at(typeDec.nameString) put (ot.anObjectType.placeholder)
-                        print("\n1452, putting " ++ typeDec.nameString ++ " in types scope")
                     }
                 }
             }
         }
-        print("\n1458, typeDecs: " ++ typeDecs)
         for(typeDecs) do { typeDec ->
             updateTypeScope(typeDec)
         }
@@ -1491,8 +1471,51 @@ def astVisitor: ast.AstVisitor is public = object {
             if (key.startsWith("publicMethod:")) then {
                 def tokens = lex.lexLines(gct.at(key))
                 def methodType = parser.methodInInterface(tokens)
-                print("\nmethodType.typeParams: {methodType.typeParams}")
                 methodType.accept(basicImportVisitor)
+                def typeParams : List⟦String⟧ = ot.getTypeParams(methodType.typeParams.params)
+                importMethods.add(aMethodType.fromNode(methodType)
+                                      with (typeParams))
+            }
+        }
+        importMethods
+    }
+
+    method processGctDialect(gct: Dictionary⟦String, List⟦String⟧⟧, impName: String) → Set⟦MethodType⟧ {
+        def importMethods : Set⟦MethodType⟧ = set.empty
+        def typeDecs: List[[share.TypeDeclaration]] = list.empty
+        gct.keys.do { key : String →
+            if { key.startsWith("typedec-of:") } then {
+                // Example key: 
+                // typedec-of:MyType:
+                //   type MyType = {
+                //     method m -> Number
+                //   }
+
+                // Gets the name of the type
+                def headerName : String = split(key, ":").at(2)
+                def typeName : String = split(headerName, ".").last
+                def tokens = lex.lexLines(gct.at(key)) 
+                def typeDec: AstNode = parser.typedec(tokens)   
+                
+                typeDecs.push(typeDec)
+                // Put type placholders into the scope
+                if(false ≠ typeDec.typeParams) then {
+                    scope.generics.at(typeDec.nameString) put (ot.aGenericType.placeholder)
+                } else {
+                    scope.types.at(typeDec.nameString) put (ot.anObjectType.placeholder)
+                }
+            }
+        }
+        for(typeDecs) do { typeDec ->
+            updateTypeScope(typeDec)
+        }
+        gct.keys.do { key: String ->
+            // Example key: 
+            // publicMethod:d:
+            // d → D⟦Number⟧MyType
+            if (key.startsWith("publicMethod:")) then {
+                def tokens = lex.lexLines(gct.at(key))
+                def methodType = parser.methodInInterface(tokens)
                 def typeParams : List⟦String⟧ = ot.getTypeParams(methodType.typeParams.params)
                 importMethods.add(aMethodType.fromNode(methodType)
                                       with (typeParams))
@@ -1528,7 +1551,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // TODO:  Not done
     // Should be treated like import, but at top level
     // Add to base type
-    method visitDialect (node: AstNode) → Boolean {
+    method visitDialect(node: AstNode) → Boolean {
         if (debug) then {
             io.error.write "\n1919: visiting dialect {node}"
         }
@@ -1546,7 +1569,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // headers of sections of gct form keys
         // Associated values are lines beneath the header
         def gct: Dictionary⟦String, List⟦String⟧⟧ = 
-            xmodule.gctDictionaryFor(dlct.value)
+            xmodule.gctDictionaryFor(dlct.path)
         def dialectName : String = dlct.nameString
         if (debug2) then {
             // io.error.write("\n1953 gct is {gct}")
@@ -1554,7 +1577,7 @@ def astVisitor: ast.AstVisitor is public = object {
         }
 
         //retrieves the names of public methods from imported module
-        def dialectMethods : Set⟦MethodType⟧ = processGct(gct, dialectName)
+        def dialectMethods : Set⟦MethodType⟧ = processGctDialect(gct, dialectName)
 
         for (dialectMethods) do {meth: MethodType ->
             scope.methods.at(meth.nameString) put(meth)
@@ -1613,7 +1636,7 @@ method updateTypeScope(typeDec : share.TypeDeclaration) → Done
                                             is confidential {
     //check whether the typeDec is a GenericType and 
     // process accordingly
-    def debug3 = true 
+    def debug3 = false 
     var oType : ObjectType
     if(false ≠ typeDec.typeParams) then {
         if (debug) then {
@@ -1655,7 +1678,7 @@ method updateMethScope(meth : AstNode) → MethodType is confidential {
 // Type check body of object definition
 // TODO: This method is still way too long!!
 method processBody (body : List⟦AstNode⟧, 
-        superclass: AstNode | false) → PublicConfidential is confidential {
+        superclass : option.Option[[AstNode]]) → PublicConfidential is confidential {
             
     def debug3: Boolean = false
     if (debug3) then {
@@ -1664,12 +1687,12 @@ method processBody (body : List⟦AstNode⟧,
 
     // Process inherited methods
     var inheritedMethods: Set⟦MethodType⟧ := set.empty
-    def hasInherits = false ≠ superclass
+    def hasInherits = superclass.isFull
 
     //CREATE SUPERTYPE OBJECTTYPE
     def transferPairTwo : PublicConfidential = superType (superclass)
-    def superType: ObjectType = transferPairTwo.publicType
-    def publicSuperType : ObjectType = transferPairTwo.inheritableType
+    def superType: ObjectType = transferPairTwo.inheritableType
+    def publicSuperType : ObjectType = transferPairTwo.publicType
 
     // set meaning of "outer:
     def outerVal: ObjectType = scope.variables.find("$elf") 
@@ -1713,10 +1736,10 @@ method processBody (body : List⟦AstNode⟧,
 
 //Add new confidential method for each alias given with super class
 //Helper method for processBody and superType
-method addAliasMethods (superclass: AstNode | false,
+method addAliasMethods (superclass : AstNode,
          inheritedMethods : Set⟦MethodType⟧) -> List⟦MethodType⟧ is confidential{
 
-    def debug3 = false
+    def debug3 = true
     def aliasMethods: List⟦MethodType⟧ = list.empty
     for (superclass.aliases) do {aliasPair →
         for (inheritedMethods) do {im →
@@ -1760,15 +1783,15 @@ method addAliasMethods (superclass: AstNode | false,
 
 //Create superType: ObjectType, type including the features of the superClass
 //Helper method for processBody
-method superType (superclass: AstNode | false)  -> PublicConfidential is confidential{
+method superType (superclass : option.Option[[AstNode]])  -> PublicConfidential is confidential{
 
     def debug3 = false
-    def hasInherits = false ≠ superclass
+    def hasInherits = superclass.isFull
     var inheritedMethods: Set⟦MethodType⟧ := set.empty
     var publicSuperType: ObjectType := anObjectType.base
 
     def superType: ObjectType = if(hasInherits) then {
-        def transfers: PublicConfidential = superTypeWithInherits (inheritedMethods, publicSuperType, superclass)
+        def transfers: PublicConfidential = superTypeWithInherits (inheritedMethods, publicSuperType, superclass.value)
         publicSuperType := transfers.publicType
         transfers.inheritableType
     } else {
@@ -1784,7 +1807,7 @@ method superType (superclass: AstNode | false)  -> PublicConfidential is confide
 }
 //Throw away excluded methods from the inheritedMethods list and the pubInheritedMethods list
 //Helper method of processBody and superType
-method throwAwayExcludedMethods (superclass: AstNode | false,
+method throwAwayExcludedMethods (superclass : AstNode,
         inheritedMethods': Set⟦MethodType⟧, pubInheritedMethods': Set⟦MethodType⟧)
         -> ot.SetMethodTypePair is confidential {
 
@@ -1799,7 +1822,7 @@ method throwAwayExcludedMethods (superclass: AstNode | false,
         // First throw away from list of all inherited methods
         for (inheritedMethods) do {im →
             if (ex.nameString == im.nameString) then {
-                if (debug) then {
+                if (true) then {
                     io.error.write "\n1126 removing {im}"
                 }
                 droppedMethods.add(im)
@@ -1808,16 +1831,22 @@ method throwAwayExcludedMethods (superclass: AstNode | false,
         // Throw away from public inherited methods
         for (pubInheritedMethods) do {im →
             if (ex.nameString == im.nameString) then {
+                if (true) then {
+                    io.error.write "\n1127 removing {im}"
+                }
                 pubDroppedMethods.add(im)
             }
         }
     }
+
+    print("\n1842: pubInheritedMethods: {pubInheritedMethods}")
     inheritedMethods.removeAll(droppedMethods)
     pubInheritedMethods.removeAll(pubDroppedMethods)
+    print("\n1843: pubInheritedMethods: {pubInheritedMethods}")
 
     if (debug) then {
         io.error.write "aliases: {superclass.aliases}"
-    }
+    }     
 
     return ot.setMethodTypePair (inheritedMethods, pubInheritedMethods)
     
@@ -1855,8 +1884,13 @@ method superTypeWithInherits (inheritedMethods': Set⟦MethodType⟧, publicSupe
     inheritedMethods := inheritedType.methods.copy
     publicSuperType := typeOf(inheriting.value)
 
+    print("\n1883: inheriting.value: {inheriting.value}")
+    print("\n1884: inheriting.value.pretty(0): {inheriting.value.pretty(0)}")
+
     //All public methods from super type
     var pubInheritedMethods := publicSuperType.methods.copy
+    print("\n1890: publicSuperType = {publicSuperType}")
+    print("\n1891: pubInheritedMethods = {pubInheritedMethods}")
 
     def transferPairFour = throwAwayExcludedMethods 
             (superclass, inheritedMethods, pubInheritedMethods)
@@ -1871,13 +1905,17 @@ method superTypeWithInherits (inheritedMethods': Set⟦MethodType⟧, publicSupe
     // Add all aliases to inherited methods, but not public ones
     inheritedMethods.addAll(aliasMethods)
 
+    print("\n1899: inheritedMethods: {inheritedMethods}")
+
     //Node of inheritedType could be inheriting.value 
     // or inheriting
     inheritedType := anObjectType.fromMethods(inheritedMethods)
     publicSuperType := 
             anObjectType.fromMethods(pubInheritedMethods)
 
-    if (debug) then {
+    if (true) then {
+        io.error.write "\n1906: inheritedMethods: {inheritedMethods}"
+        io.error.write "\n1907: pubInheritedMethods: {pubInheritedMethods}"
         io.error.write 
             "\1144: public super type: {publicSuperType}"
         io.error.write 
@@ -2223,14 +2261,12 @@ method collectTypes(nodes : Collection⟦AstNode⟧) → Done
 
     if (debug3) then {
         io.error.write "\nGenerics scope is: {scope.generics}"
-        io.error.write "\nType  scope is: {scope.types}"
+        io.error.write "\nType scope is: {scope.types}"
     }
 
     // Update type placeholders in the scope to real types 
     for(typeDecs) do { typeDec →
-        if(false ≠ typeDec.typeParams) then {
-            updateTypeScope(typeDec)
-        }
+        updateTypeScope(typeDec)
     }
 
     if (debug3) then {
@@ -2292,6 +2328,12 @@ method for(a) doWithContinue(bl) → Done is confidential{
 // Used with for()doWithContinue
 method continue'(e, bl) → Done is confidential {
     bl.apply(e, { return })
+}
+
+method superclassOption (node : AstNode) -> option.Option[[AstNode]] {
+    match (node.superclass)
+        case { superclassNode : AstNode -> option.full[[AstNode]] (superclassNode) }
+        else { option.empty }
 }
 
 
