@@ -2,7 +2,6 @@
 cd ..
 mkdir gracelang
 cd gracelang
-git clone https://github.com/KimBruce/minigrace.git
+git clone https://github.com/gracelang/minigrace.git
 cd minigrace
-git checkout xmodule
 make install
