@@ -1,0 +1,51 @@
+=====================================
+module-level symbol table
+
+Current: (module ST: 104➞103➞102➞101):
+     $dialect(selfDef)  $module(selfDef)  AndPattern(2)(from a trait)  AndType(2)(from a trait)  BarType(2)(from a trait)  BasePattern(from a trait)  BaseType(from a trait)  Binding(from a trait)  Boolean(from a trait)  BoundsError(from a trait)  Collection(from a trait)  CollectionFactory(from a trait)  ConcurrentModification(from a trait)  DialectError(from a trait)  Dictionary(from a trait)  Done(from a trait)  Enumerable(from a trait)  EnvironmentException(from a trait)  EqualityObject(from a trait)  Exception(from a trait)  ExceptionKind(from a trait)  ExceptionPacket(from a trait)  Function0(from a trait)  Function1(from a trait)  Function2(from a trait)  Function3(from a trait)  Iterator(from a trait)  IteratorExhausted(from a trait)  List(from a trait)  NoSuchMethod(from a trait)  NoSuchObject(from a trait)  None(from a trait)  NotPattern(1)(from a trait)  Number(from a trait)  Object(from a trait)  OrPattern(2)(from a trait)  Pattern(from a trait)  PlusType(2)(from a trait)  Point(from a trait)  Predicate0(from a trait)  Predicate1(from a trait)  Predicate2(from a trait)  Predicate3(from a trait)  Procedure0(from a trait)  Procedure1(from a trait)  Procedure2(from a trait)  Procedure3(from a trait)  ProgrammingError(from a trait)  RequestError(from a trait)  ResourceException(from a trait)  RuntimeError(from a trait)  SelfType(from a trait)  Sequence(from a trait)  Sequenceable(from a trait)  Set(from a trait)  String(from a trait)  SubobjectResponsibility(from a trait)  Type(from a trait)  TypeError(from a trait)  TypeIntersection(2)(from a trait)  TypeSubtraction(2)(from a trait)  TypeUnion(2)(from a trait)  TypeVariant(2)(from a trait)  UnimplementedMethod(from a trait)  UninitializedVariable(from a trait)  abstract(from a trait)  annotation(from a trait)  asDebugString(from graceObject)  asString(from graceObject)  basicAsString(from graceObject)  binding(from a trait)  collection(from a trait)  confidential(from a trait)  dictionary(from a trait)  dictionary(1)(from a trait)  do(1)while(1)(from a trait)  done(from a trait)  enumerable(from a trait)  equality(from a trait)  for(1)and(1)do(1)(from a trait)  for(1)do(1)(from a trait)  hashCombine(2)(from a trait)  identityEquality(from a trait)  indexable(from a trait)  infinity(from a trait)  isMe(1)(from graceObject)  list(from a trait)  list(1)(from a trait)  max(2)(from a trait)  merge(2)(from a trait)  min(2)(from a trait)  myIdentityHash(from graceObject)  override(from a trait)  pi(from a trait)  point2Dx(1)y(1)(from a trait)  primitiveArray(from a trait)  public(from a trait)  range(from a trait)  readable(from a trait)  repeat(1)times(1)(from a trait)  required(from a trait)  sb(import)  self(selfDef)  sequence(from a trait)  sequence(1)(from a trait)  set(from a trait)  set(1)(from a trait)  singleton(from a trait)  singleton(1)(from a trait)  valueOf(1)(from a trait)  while(1)do(1)(from a trait)  writable(from a trait)  x(defdec)  π(from a trait) 
+
+Parent: (dialect ST: 103➞102➞101):
+     AndPattern(2)(from a trait)  AndType(2)(from a trait)  BarType(2)(from a trait)  BasePattern(from a trait)  BaseType(from a trait)  Binding(from a trait)  Boolean(from a trait)  BoundsError(from a trait)  Collection(from a trait)  CollectionFactory(from a trait)  ConcurrentModification(from a trait)  DialectError(from a trait)  Dictionary(from a trait)  Done(from a trait)  Enumerable(from a trait)  EnvironmentException(from a trait)  EqualityObject(from a trait)  Exception(from a trait)  ExceptionKind(from a trait)  ExceptionPacket(from a trait)  Function0(from a trait)  Function1(from a trait)  Function2(from a trait)  Function3(from a trait)  Iterator(from a trait)  IteratorExhausted(from a trait)  List(from a trait)  NoSuchMethod(from a trait)  NoSuchObject(from a trait)  None(from a trait)  NotPattern(1)(from a trait)  Number(from a trait)  Object(from a trait)  OrPattern(2)(from a trait)  Pattern(from a trait)  PlusType(2)(from a trait)  Point(from a trait)  Predicate0(from a trait)  Predicate1(from a trait)  Predicate2(from a trait)  Predicate3(from a trait)  Procedure0(from a trait)  Procedure1(from a trait)  Procedure2(from a trait)  Procedure3(from a trait)  ProgrammingError(from a trait)  RequestError(from a trait)  ResourceException(from a trait)  RuntimeError(from a trait)  SelfType(from a trait)  Sequence(from a trait)  Sequenceable(from a trait)  Set(from a trait)  String(from a trait)  SubobjectResponsibility(from a trait)  Type(from a trait)  TypeError(from a trait)  TypeIntersection(2)(from a trait)  TypeSubtraction(2)(from a trait)  TypeUnion(2)(from a trait)  TypeVariant(2)(from a trait)  UnimplementedMethod(from a trait)  UninitializedVariable(from a trait)  abstract(from a trait)  annotation(from a trait)  asDebugString(from graceObject)  asString(from graceObject)  basicAsString(from graceObject)  binding(from a trait)  collection(from a trait)  confidential(from a trait)  dictionary(from a trait)  dictionary(1)(from a trait)  do(1)while(1)(from a trait)  done(from a trait)  enumerable(from a trait)  equality(from a trait)  for(1)and(1)do(1)(from a trait)  for(1)do(1)(from a trait)  hashCombine(2)(from a trait)  identityEquality(from a trait)  indexable(from a trait)  infinity(from a trait)  isMe(1)(from graceObject)  list(from a trait)  list(1)(from a trait)  max(2)(from a trait)  merge(2)(from a trait)  min(2)(from a trait)  myIdentityHash(from graceObject)  override(from a trait)  pi(from a trait)  point2Dx(1)y(1)(from a trait)  primitiveArray(from a trait)  public(from a trait)  range(from a trait)  readable(from a trait)  repeat(1)times(1)(from a trait)  required(from a trait)  self(selfDef)  sequence(from a trait)  sequence(1)(from a trait)  set(from a trait)  set(1)(from a trait)  singleton(from a trait)  singleton(1)(from a trait)  standardBundle(import)  valueOf(1)(from a trait)  while(1)do(1)(from a trait)  writable(from a trait)  π(from a trait) 
+
+Parent: (builtIn ST: 102➞101):
+     ...(defdec)  Unknown(typedec)  false(method)  native(1)code(1)(method)  native(1)header(1)(method)  outer(defdec)  print(1)(method)  self(selfDef)  true(method) 
+
+Parent: (empty ST: 101):
+    
+
+
+=====================================
+1:1-7:8 module (ST 104)
+  0:0-0 dialect (ST 104)
+      Path: standard
+  Name: useTrait
+  Traits:
+    3:1-11 inherit (ST 104) (use)
+    3:5-11 call (ST 104)
+      Receiver: 3:5-6 identifier (ST 104)‹sb›
+      Method Name: open$object(1)
+      Parts:
+        3:5-8 callwithpart (ST 104): open
+          Args:
+        3:5-8 callwithpart (ST 104): $object
+          Args:
+            3:5-8 identifier (ST 104)‹self›
+    Provided names: list [AndPattern(2), AndType(2), BarType(2), BasePattern, BaseType, Binding, Boolean, BoundsError, Collection, CollectionFactory, ConcurrentModification, DialectError, Dictionary, Done, Enumerable, EnvironmentException, EqualityObject, Exception, ExceptionKind, ExceptionPacket, Function0, Function1, Function2, Function3, Iterator, IteratorExhausted, List, NoSuchMethod, NoSuchObject, None, NotPattern(1), Number, Object, OrPattern(2), Pattern, PlusType(2), Point, Predicate0, Predicate1, Predicate2, Predicate3, Procedure0, Procedure1, Procedure2, Procedure3, ProgrammingError, RequestError, ResourceException, RuntimeError, SelfType, Sequence, Sequenceable, Set, String, SubobjectResponsibility, Type, TypeError, TypeIntersection(2), TypeSubtraction(2), TypeUnion(2), TypeVariant(2), UnimplementedMethod, UninitializedVariable, abstract, annotation, binding, collection, confidential, dictionary, dictionary(1), do(1)while(1), done, enumerable, equality, for(1)and(1)do(1), for(1)do(1), hashCombine(2), identityEquality, indexable, infinity, list, list(1), max(2), merge(2), min(2), override, pi, point2Dx(1)y(1), primitiveArray, public, range, readable, repeat(1)times(1), required, sequence, sequence(1), set, set(1), singleton, singleton(1), valueOf(1), while(1)do(1), writable, π]
+  1:1-29 import (ST 104)
+    Path: standardBundle
+    Identifier: identifierBinding‹sb›
+
+  5:1-19 defdec (ST 104)
+    5:5-5 identifier (ST 104)Binding‹x›
+    Type: 5:9-0:0 member (ST 104) on self
+        Receiver: 5:9-12 identifier (ST 104)‹self›
+        Method Name: 0:-5-0 callwithpart: Number
+        Args:
+    Value: 5:18-19 num (ST 104)(47)
+  7:1-8 call (ST 104) on self
+    Receiver: 7:7-14 identifier (ST 104)‹$builtIn›
+    Method Name: print(1)
+    Parts:
+      7:1-7 callwithpart (ST 104): print
+        Args:
+          7:7-7 identifier (ST 104)‹x›
