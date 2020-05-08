@@ -1000,9 +1000,10 @@ def astVisitor: ast.AstVisitor is public = object {
     // Process dialects and import statements
     // TODO: handle dialects
     method visitModule (node: AstNode) → Boolean {  // added kim
-        def debug3: Boolean = false
+        def debug3: Boolean = true 
         if (debug3) then {
            io.error.write "\n1698: visiting module {node}"
+           io.error.write "\n1699: module.usedTraits: {node.usedTraits}"
         }
         // Type check dialect
         visitDialect (node.theDialect)
