@@ -44,7 +44,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = false 
+def debug: Boolean = true 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
@@ -539,7 +539,7 @@ def astVisitor: ast.AstVisitor is public = object {
             if (debug) then {io.error.write 
                 "\n470: using type of finally clause: {returnType}"
             }
-        } else {  // return type is variant of all block types.	   
+        } else {  // return type is variant of all block types.    
 
             // Type returned by variant of all return types in cases
             returnType := ot.fromObjectTypeList(returnTypesList)
@@ -1000,7 +1000,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Process dialects and import statements
     // TODO: handle dialects
     method visitModule (node: AstNode) → Boolean {  // added kim
-        def debug3: Boolean = true 
+        def debug3: Boolean = false 
         if (debug3) then {
            io.error.write "\n1698: visiting module {node}"
            io.error.write "\n1699: module.usedTraits: {node.usedTraits}"
@@ -1292,7 +1292,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Grab information from gct file
     // Move processImport back into visitImport
     method visitImport (imp: AstNode) → Boolean {
-        def debug3: Boolean = false 
+        def debug3: Boolean = true 
         if (debug3) then {
             io.error.write "\n1861: visiting import {imp}"
         }
@@ -1467,15 +1467,27 @@ def astVisitor: ast.AstVisitor is public = object {
         }
         gct.keys.do { key: String ->
             // Example key: 
-            // publicMethod:d:
-            // d → D⟦Number⟧MyType
-            if (key.startsWith("publicMethod:")) then {
-                def tokens = lex.lexLines(gct.at(key))
-                def methodType = parser.methodInInterface(tokens)
-                methodType.accept(basicImportVisitor)
-                def typeParams : List⟦String⟧ = ot.getTypeParams(methodType.typeParams.params)
-                importMethods.add(aMethodType.fromNode(methodType)
-                                      with (typeParams))
+            // methodTypes:
+            // o → T
+            // t(n:Number) → Number
+            if (key.startsWith("methodTypes")) then {
+                gct.at(key).do {value ->
+                    print("\n1475: value = {value}")
+                }
+                gct.at(key).do { value ->
+                    def tokens = lex.lexLines(value)
+                    tokens.do { token -> print("\n token = {token}")}
+                    def methodType = parser.methodInInterface(tokens)
+                    print("\n1477: tokens: {tokens}")
+                    print("\n1478: methodType: {methodType}")
+                    methodType.accept(basicImportVisitor)
+                    def typeParams : List⟦String⟧ = if (false ≠ methodType.typeParams) then {
+                        ot.getTypeParams(methodType.typeParams.params)
+                    } else {
+                        list.empty
+                    }
+                    importMethods.add(aMethodType.fromNode(methodType) with (typeParams))
+                }
             }
         }
         importMethods
@@ -1740,7 +1752,7 @@ method processBody (body : List⟦AstNode⟧,
 method addAliasMethods (superclass : AstNode,
          inheritedMethods : Set⟦MethodType⟧) -> List⟦MethodType⟧ is confidential{
 
-    def debug3 = true
+    def debug3 = false
     def aliasMethods: List⟦MethodType⟧ = list.empty
     for (superclass.aliases) do {aliasPair →
         for (inheritedMethods) do {im →
