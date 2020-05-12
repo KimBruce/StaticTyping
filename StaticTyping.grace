@@ -44,7 +44,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = true 
+def debug: Boolean = false 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
@@ -1292,7 +1292,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Grab information from gct file
     // Move processImport back into visitImport
     method visitImport (imp: AstNode) → Boolean {
-        def debug3: Boolean = true 
+        def debug3: Boolean = false 
         if (debug3) then {
             io.error.write "\n1861: visiting import {imp}"
         }
@@ -1475,11 +1475,8 @@ def astVisitor: ast.AstVisitor is public = object {
                     print("\n1475: value = {value}")
                 }
                 gct.at(key).do { value ->
-                    def tokens = lex.lexLines(value)
-                    tokens.do { token -> print("\n token = {token}")}
+                    def tokens = lex.lexString(value)
                     def methodType = parser.methodInInterface(tokens)
-                    print("\n1477: tokens: {tokens}")
-                    print("\n1478: methodType: {methodType}")
                     methodType.accept(basicImportVisitor)
                     def typeParams : List⟦String⟧ = if (false ≠ methodType.typeParams) then {
                         ot.getTypeParams(methodType.typeParams.params)
