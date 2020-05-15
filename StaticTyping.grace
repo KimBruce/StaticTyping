@@ -44,7 +44,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = true 
+def debug: Boolean = false 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 

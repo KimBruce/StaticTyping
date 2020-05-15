@@ -699,7 +699,7 @@ def aMethodType: MethodTypeFactory is public = object {
 
     //Helper method for fromNode
     //Handles the case where the node is of type Method, Class or MethodSignature
-    method fromNodeMethCase (meth:AstNode, typeParams: List⟦MixPart⟧) 
+    method fromNodeMethCase (meth:AstNode, typeParams: List⟦String⟧) 
                             -> MethodType is confidential {
             def debug3: Boolean = false
             var signature: List⟦MixPart⟧ := list[]
