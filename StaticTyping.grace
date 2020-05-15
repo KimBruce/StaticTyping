@@ -44,7 +44,7 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = false 
+def debug: Boolean = true 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
@@ -1467,24 +1467,18 @@ def astVisitor: ast.AstVisitor is public = object {
         }
         gct.keys.do { key: String ->
             // Example key: 
-            // methodTypes:
-            // o → T
-            // t(n:Number) → Number
-            if (key.startsWith("methodTypes")) then {
-                gct.at(key).do {value ->
-                    print("\n1475: value = {value}")
+            // methodType:d:
+            // d → D⟦Number⟧
+            if (key.startsWith("methodType:")) then {
+                def tokens = lex.lexLines(gct.at(key))
+                def methodType = parser.methodInInterface(tokens)
+                methodType.accept(basicImportVisitor)
+                def typeParams : List⟦String⟧ = if (false ≠ methodType.typeParams) then {
+                    ot.getTypeParams(methodType.typeParams.params)
+                } else {
+                    list.empty
                 }
-                gct.at(key).do { value ->
-                    def tokens = lex.lexString(value)
-                    def methodType = parser.methodInInterface(tokens)
-                    methodType.accept(basicImportVisitor)
-                    def typeParams : List⟦String⟧ = if (false ≠ methodType.typeParams) then {
-                        ot.getTypeParams(methodType.typeParams.params)
-                    } else {
-                        list.empty
-                    }
-                    importMethods.add(aMethodType.fromNode(methodType) with (typeParams))
-                }
+                importMethods.add(aMethodType.fromNode(methodType) with (typeParams))
             }
         }
         importMethods
