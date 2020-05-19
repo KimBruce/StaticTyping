@@ -20,7 +20,7 @@ testSuiteNamed "ampersand with variant types" with {
     def typeNumber      : ObjectType = ot.anObjectType.number
     def typeString      : ObjectType = ot.anObjectType.string
     def typeListTp      : ObjectType = ot.anObjectType.listTp
-    def typeDictionary  : ObjectType = ot.anObjectType.dictionary
+    def typeDictionary  : ObjectType = ot.anObjectType.dictionaryTp
     def typePoint       : ObjectType = ot.anObjectType.point
     def typeBinding     : ObjectType = ot.anObjectType.binding
     def typeObject      : ObjectType = ot.anObjectType.base
