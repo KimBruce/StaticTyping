@@ -13,7 +13,7 @@ use sb.open
 // ** Helpers ***************************************************
 
 // The frame rate of the drawing.
-def frameRate: Number = 30
+def frameRate: Number is public = 30
 
 method randomNumberFrom (m: Number) to (n: Number) -> Number {
     // A pseudo-random number in the interval [m..n)
@@ -503,7 +503,7 @@ class keyEventSource (source':Component) event(event':Foreign) -> KeyEvent {
 type ComponentFactory⟦T⟧ = {
 
     // Build a component around an existing element.
-    fromElement (element : T) -> T
+    fromElement (element) -> T
 
     // Build a component around a new element of the given tag name.
     ofElementType (tagName: String) -> T
