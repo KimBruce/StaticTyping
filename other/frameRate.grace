@@ -1,0 +1,3 @@
+dialect "intro"
+
+print(frameRate)
