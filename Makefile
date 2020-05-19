@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := compile
 
-MINIGRACE = ../gracelang/minigrace
+MINIGRACE=../gracelang/minigrace
 
 %.js: %.grace
 	mgc $<
@@ -18,6 +18,15 @@ StaticTyping.js: SharedTypes.js ScopeModule.js ObjectTypeModule.js StaticTyping.
 	mgc StaticTyping.grace
 
 compile: $(patsubst %, %.js, SharedTypes ScopeModule ObjectTypeModule StaticTyping)
+
+intro: compile intro.grace
+	mgc intro.grace
+
+ide: compile intro
+	mkdir -p ide
+	cp {SharedTypes.js,ScopeModule.js,ObjectTypeModule.js,StaticTyping.js,intro.js} ide/
+	rsync -rtz --chmod=Fa+rX ide/ $(WEB_SERVER):$(WEB_DIRECTORY)/js
+	rm -rf ide
 
 test:
 	rm -f tests/*.js
