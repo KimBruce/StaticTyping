@@ -13,7 +13,7 @@ use sb.open
 // ** Helpers ***************************************************
 
 // The frame rate of the drawing.
-def frameRate: Number is public = 30
+def frameRate: Number = 30
 
 method randomNumberFrom (m: Number) to (n: Number) -> Number {
     // A pseudo-random number in the interval [m..n)
@@ -31,11 +31,88 @@ def document: Foreign = dom.document
 
 // ** Types ********************************************************************
 
+type Style = interface {
+
+    display := (value: String) -> Done
+    display -> String
+
+    justifyContent := (value: String) -> Done
+    justifyContent -> String
+
+    flexFlow := (value: String) -> Done
+    flexFlow -> String
+
+    flexDirection := (value: String) -> Done
+    flexDirection -> String
+
+    width := (value: String) -> Done
+    width -> String
+
+    height := (value: String) -> Done
+    height -> String
+
+    overflow := (value: String) -> Done
+    overflow -> String
+
+    margin := (value: String) -> Done
+    margin -> String
+
+    alignSelf := (value: String) -> Done
+    alignSelf -> String
+
+    flexGlow := (value: String) -> Done
+    flexGlow -> String
+
+}
+
+type Element = interface {
+
+    offsetLeft -> Number
+    offsetTop -> Number
+    width -> Number
+    height -> Number
+
+    style -> Style
+
+    loop := (value : Boolean) -> Done
+    loop -> Boolean
+    ended -> Boolean
+    src := (value : String) -> Done
+    src -> String
+    textContent := (value : String) -> Done
+    textContent -> String
+    placeholder := (value : String) -> Done
+    placeholder -> String
+
+    appendChild (element : Element) -> Done
+    insertBefore (elementBefore : Element, element : Element) -> Done
+    firstChild -> Element
+    removeChild (labelElement : Foreign) -> Done
+
+    play -> Done
+    pause -> Done
+
+    setAttribute (attribute : String, value : String) -> Done
+
+    parentElement -> Element
+
+    cloneNode (deep : Boolean) -> Element
+
+    getContext (context : String) -> Foreign
+
+    contains (from : Element) -> Boolean
+
+    addEventListener (event': String, f: Procedure1⟦Foreign⟧) -> Done
+
+    ownerDocument -> Foreign
+
+}
+
 // The super-type of all components in a GUI.
 type Component = interface {
 
     // The underlying DOM element of the component.
-    element
+    element -> Object
 
     // The width of this component.
     width -> Number
@@ -503,7 +580,7 @@ class keyEventSource (source':Component) event(event':Foreign) -> KeyEvent {
 type ComponentFactory⟦T⟧ = {
 
     // Build a component around an existing element.
-    fromElement (element) -> T
+    fromElement (element : Element) -> T
 
     // Build a component around a new element of the given tag name.
     ofElementType (tagName: String) -> T
@@ -515,8 +592,8 @@ def maxClickTime: Number = 200
 // down in order for the event to be registered as a click.
 
 
-class componentFromElement (element') -> Component {
-    def element is public = element'
+class componentFromElement (element' : Element) -> Component {
+    def element : Element is public = element'
 
     // width of component
     method width -> Number {
