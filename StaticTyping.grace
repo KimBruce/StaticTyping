@@ -1555,7 +1555,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // TODO:  Not done
     // Should be treated like import, but at top level
     // Add to base type
-    method visitDialect(node: AstNode) → Boolean {
+    method visitDialect2 (node: AstNode) → Boolean {
         if (debug) then {
             io.error.write "\n1919: visiting dialect {node}"
         }
@@ -1565,7 +1565,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Grab information from gct file
     // Move processImport back into visitImport
     // TODO: Make this work
-    method visitDialect2 (dlct: AstNode) → Boolean {
+    method visitDialect (dlct: AstNode) → Boolean {
         def debug2: Boolean = false
         if (debug2) then {
             io.error.write "\n1861: visiting dialect {dlct}"
