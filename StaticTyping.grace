@@ -32,7 +32,10 @@ type TypePair = share.TypePair
 def StaticTypingError: ExceptionKind is public = share.StaticTypingError
 
 // imported constants relating to cacheing type info
+// contains only public methods associate with object
 def cache: Dictionary = sc.cache
+// chache containing confidential methods of object as well as public
+// Used for inheriting from an object
 def allCache: Dictionary = sc.allCache
 
 def aMethodType : MethodTypeFactory = ot.aMethodType
@@ -44,12 +47,12 @@ def aParam: ParamFactory = ot.aParam
 def preludeTypes: Set[[String]] = share.preludeTypes
 
 // debugging prints will print if debug is true
-def debug: Boolean = false 
+def debug: Boolean = true 
 
 // return the return type of the block (as declared)
 method objectTypeFromBlock(block: AstNode) → ObjectType 
                             is confidential {
-    def bType = typeOf(block)
+    def bType: ObjectType = typeOf(block)
     
     if (debug) then {
         io.error.write "\n48: bType of block is {bType}"
@@ -148,7 +151,7 @@ type RequestPart = {
 }
 
 // Check if the signature and parameters of a request match
-// the declaration, return the type of the result
+// the declaration, & if so, return the type of the result
 method check (req : share.Request) against(meth' : MethodType)
                                 → ObjectType is confidential {
     def debug3: Boolean = false
@@ -177,7 +180,7 @@ method check (req : share.Request) against(meth' : MethodType)
         for (params) and (args) do { param: Param, arg: AstNode →
             def pType: ObjectType = param.typeAnnotation
             def aType: ObjectType = typeOf(arg)
-            if (debug) then {
+            if (debug3) then {
                 io.error.write (
                     "\n171 Checking {arg} of type {aType} is " ++
                     "subtype of {pType} while checking {req} " ++
@@ -246,7 +249,7 @@ method split (input : String, separator : String) → List⟦String⟧
                                 is confidential {
     var start: Number := 1
     var end: Number := 1
-    var output: List⟦ List⟦String⟧ ⟧ := list[]
+    var output: List⟦ List⟦String⟧ ⟧ := list.empty
     while {end < input.size} do {
         if (input.at(end) == separator) then {
             var cand := input.substringFrom(start)to(end-1)
@@ -326,7 +329,7 @@ def astVisitor: ast.AstVisitor is public = object {
             } else {
                 thenType | elseType
             }
-        } else {
+        } else {  // Is this redundant? Is everything subtype of doneType?
             anObjectType.doneType
         }
 
@@ -338,6 +341,7 @@ def astVisitor: ast.AstVisitor is public = object {
     // Type check block.  Fails if don't give types to 
     // block parameters
     method visitBlock (block: AstNode) → Boolean {
+        def debug3:Boolean = false
         // Raise exception if block parameters not given types
         for (block.params) do {p→
             if (((p.kind == "identifier") || {p.wildcard.not})
@@ -357,7 +361,7 @@ def astVisitor: ast.AstVisitor is public = object {
             for(block.params) do { param →
                 if (("string" ≠ param.dtype.kind)
                             && {"num" ≠ param.dtype.kind}) then {
-                    if (debug) then {
+                    if (debug3) then {
                         io.error.write(
                             "\n1517: {param.value} has {param.dtype}")
                     }
@@ -377,7 +381,7 @@ def astVisitor: ast.AstVisitor is public = object {
         // At this point, know block type checks.
 
         // Now compute type of block and put in cache
-        def parameters = list[]
+        def parameters = list.empty
         for(block.params) do { param: AstNode →
             if (param.dtype.kind == "string") then {
                 parameters.push (aParam.withName (param.value)
@@ -388,7 +392,7 @@ def astVisitor: ast.AstVisitor is public = object {
             } else {
                 def newType: ObjectType = 
                     anObjectType.fromDType (param.dtype) with (list.empty)
-                if (debug) then {
+                if (debug3) then {
                     io.error.write "\n355: newType is {newType}"
                 }
                 parameters.push(aParam.withName (param.value) 
@@ -401,7 +405,7 @@ def astVisitor: ast.AstVisitor is public = object {
 
         cache.at (block) put (blockType)
         if (debug) then {
-            io.error.write "block has type {blockType}"
+            io.error.write "\n408: block has type {blockType}"
         }
         false
     }
@@ -1005,6 +1009,7 @@ def astVisitor: ast.AstVisitor is public = object {
            io.error.write "\n1698: visiting module {node}"
            io.error.write "\n1699: module.usedTraits: {node.usedTraits}"
         }
+        scope.variables.at("$builtIn") put(anObjectType.builtInType)
         // Type check dialect
         visitDialect (node.theDialect)
 
@@ -1047,7 +1052,8 @@ def astVisitor: ast.AstVisitor is public = object {
 
     // members are type-checked like calls
     method visitMember (node: AstNode) → Boolean {
-        if (debug) then {
+        def debug3: Boolean = false
+        if (debug3) then {
             io.error.write
                 "\n744 visiting member of {node.toGrace(0)}"
         }
@@ -2102,6 +2108,7 @@ method methCase (meth, allMethods', publicMethods') -> ot.SetMethodTypePair is c
 //Handles the case where stmt is a share.Def | share.Var
 //Create type of method giving access to def or var value
 method defCase (defd, allMethods', publicMethods') -> ot.SetMethodTypePair is confidential{
+    def debug3: Boolean = false
     var allMethods := allMethods'
     var publicMethods := publicMethods'
 
@@ -2114,7 +2121,7 @@ method defCase (defd, allMethods', publicMethods') -> ot.SetMethodTypePair is co
                                 with (mType)
     }
     allMethods.add(mType)
-    if (debug) then {
+    if (debug3) then {
         io.error.write "\n1177 AllMethods: {allMethods}"
     }
     //create method to access def/var if it is readable

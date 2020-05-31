@@ -2292,6 +2292,11 @@ def anObjectType: ObjectTypeFactory is public = object {
     def dynamicDoneBlock: ObjectType is public = fromMethods(set.empty) withName("DynamicDoneBlock")
     def exceptionKind: ObjectType is public = fromMethods(set.empty) withName("ExceptionKind")
 
+    // builtin constants typing
+    def builtInType: ObjectType is public = fromMethods(set.empty) withName("$BuiltIn")
+    addTo (builtInType) name ("true") returns (boolean)
+    addTo (builtInType) name ("false") returns (boolean)
+    addTo (builtInType) name ("print") param (base) returns (doneType)
     // Now add methods to each type
 
     // Done is very restricted!
